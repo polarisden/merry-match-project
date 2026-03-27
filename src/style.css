@@ -125,6 +125,14 @@
       line-height: 150%;
       letter-spacing: 0%;
     }
+
+    .profile-let-make-profile {
+      font-family: "Nunito", sans-serif;
+      font-weight: 800;
+      font-size: 46px;
+      line-height: 125%;
+      letter-spacing: -2%;
+    }
   }
 
   .headline4 {
@@ -146,6 +154,14 @@
   .body2 {
     font-family: "Nunito", sans-serif;
     font-weight: 400;
+    font-size: 16px;
+    line-height: 150%;
+    letter-spacing: 0%;
+  }
+
+  .body2-w-700 {
+    font-family: "Nunito", sans-serif;
+    font-weight: 700;
     font-size: 16px;
     line-height: 150%;
     letter-spacing: 0%;
@@ -179,6 +195,14 @@
     font-family: "Nunito", sans-serif;
     font-weight: 500;
     font-size: 12px;
+    line-height: 150%;
+    letter-spacing: 0%;
+  }
+
+  .tagline-profile {
+    font-family: "Nunito", sans-serif;
+    font-weight: 500;
+    font-size: 14px;
     line-height: 150%;
     letter-spacing: 0%;
   }
