@@ -9,6 +9,21 @@ const router = createRouter({
     { path: '/', component: HomePage },
     { path: '/test', component: TestPage },
     { path: '/Register', component: RegisterPage },
+    {
+      path: '/profile',
+      children: [
+        {
+          path: 'preview',
+          name: 'preview-profile',
+          component: () => import('@/views/profile/MyPreviewProfilePage.vue'),
+        },
+        {
+          path: 'edit',
+          name: 'edit-profile',
+          component: () => import('@/views/profile/EditProfilePage.vue')
+        }
+      ]
+    },
   ],
 })
 
