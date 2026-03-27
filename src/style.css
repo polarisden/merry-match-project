@@ -74,7 +74,6 @@
     font-size: 60px;
     line-height: 115%;
     letter-spacing: -2%;
-    color: #2A2E3F;
   }
 
   .headline2 {
@@ -83,7 +82,6 @@
     font-size: 46px;
     line-height: 125%;
     letter-spacing: -2%;
-    color: #2A2E3F;
   }
 
   .headline3 {
@@ -93,7 +91,40 @@
     line-height: 40px;
     letter-spacing: -1%;
     font-variant-numeric: lining-nums proportional-nums;
-    color: #2A2E3F;
+  }
+
+  .register-hero-title {
+    font-family: "Nunito", sans-serif;
+    font-weight: 700;
+    font-size: 32px;
+    line-height: 1.1;
+    letter-spacing: -1%;
+    font-variant-numeric: lining-nums proportional-nums;
+  }
+  @media (min-width: 1024px) {
+    .register-hero-title {
+      font-weight: 800;
+      font-size: 46px;
+      line-height: 125%;
+      letter-spacing: -2%;
+      font-variant-numeric: normal;
+    }
+
+    .register-step-number {
+      font-family: "Nunito", sans-serif;
+      font-weight: 700;
+      font-size: 24px;
+      line-height: 125%;
+      letter-spacing: -2%;
+    }
+
+    .register-step-meta {
+      font-family: "Nunito", sans-serif;
+      font-weight: 500;
+      font-size: 12px;
+      line-height: 150%;
+      letter-spacing: 0%;
+    }
   }
 
   .headline4 {
@@ -102,7 +133,6 @@
     font-size: 24px;
     line-height: 125%;
     letter-spacing: -2%;
-    color: #2A2E3F;
   }
 
   .body1 {
@@ -111,7 +141,6 @@
     font-size: 20px;
     line-height: 150%;
     letter-spacing: 0%;
-    color: #2A2E3F;
   }
 
   .body2 {
@@ -120,16 +149,14 @@
     font-size: 16px;
     line-height: 150%;
     letter-spacing: 0%;
-    color: #2A2E3F;
   }
 
   .body3 {
     font-family: "Nunito", sans-serif;
-    font-weight: 500;
+    font-weight: 800;
     font-size: 15px;
     line-height: 150%;
     letter-spacing: 0%;
-    color: #2A2E3F;
   }
 
   .body4 {
@@ -138,16 +165,14 @@
     font-size: 14px;
     line-height: 150%;
     letter-spacing: 0%;
-    color: #2A2E3F;
   }
 
   .body5 {
-    font-family: "Nunito", sans-serif;
+    font-family: "Nunito", sans-serif; 
     font-weight: 500;
     font-size: 12px;
     line-height: 150%;
     letter-spacing: 0%;
-    color: #2A2E3F;
   }
 
   .tagline {
@@ -156,6 +181,5 @@
     font-size: 12px;
     line-height: 150%;
     letter-spacing: 0%;
-    color: #2A2E3F;
   }
 }
