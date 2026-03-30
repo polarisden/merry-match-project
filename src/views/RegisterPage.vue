@@ -1,8 +1,10 @@
 <script setup>
 import { computed, ref } from "vue"
 import BaseButtonPrimary from "@/components/base/BaseButtonPrimary.vue"
+import CalendarPicker from "@/components/ui/CalendarPicker.vue"
 
 const currentStep = ref(1)
+const dateOfBirth = ref("")
 
 const steps = [
   { title: "Basic Information" },
@@ -13,7 +15,7 @@ const steps = [
 const stepFields = {
   1: [
     { label: "Name", type: "text", placeholder: "Jon Snow" },
-    { label: "Date of birth", type: "date", placeholder: "01/01/2022" },
+    { label: "Date of birth", type: "date", placeholder: "01/01/2008" },
     { label: "Location", type: "select", placeholder: "Thailand" },
     { label: "City", type: "select", placeholder: "Bangkok" },
     { label: "Username", type: "text", placeholder: "At least 6 character" },
@@ -26,11 +28,6 @@ const stepFields = {
     { label: "Sexual preferences", type: "select", placeholder: "Female" },
     { label: "Racial preferences", type: "select", placeholder: "Asian" },
     { label: "Meeting interests", type: "select", placeholder: "Friends" },
-  ],
-  3: [
-    { label: "Distance", type: "select", placeholder: "Within 10 km" },
-    { label: "Age range", type: "text", placeholder: "24 - 35" },
-    { label: "Preferred city", type: "select", placeholder: "Bangkok" },
   ],
 }
 
@@ -178,8 +175,14 @@ function goBack() {
           </label>
 
           <div class="relative">
+            <CalendarPicker
+              v-if="field.type === 'date'"
+              v-model="dateOfBirth"
+              :placeholder="field.placeholder"
+            />
+
             <input
-              v-if="field.type !== 'select'"
+              v-else-if="field.type !== 'select'"
               :type="field.type"
               class="w-full h-11 px-3 pr-10 border border-gray-300 rounded-lg bg-gray-100 lg:bg-white placeholder:text-gray-500 text-[13px] outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-300"
               :placeholder="field.placeholder"
