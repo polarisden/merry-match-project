@@ -1,3 +1,30 @@
+<script setup>
+import { useRouter } from "vue-router"
+import ArrowIcon from '@/assets/icons/arrow.svg?component'
+import LocationIcon from '@/assets/icons/location.svg?component'
+import placeholderPhotoSrc from '@/assets/images/profile-pic.png'
+
+const router = useRouter()
+
+/** Placeholder copy for layout; replace with props or store when the backend is wired up. */
+const displayName = 'Jon Snow'
+const displayAge = '26'
+const displayLocation = 'Bangkok, Thailand'
+const aboutText = 'I know nothing..but you'
+const hobbyTags = ['e-sport', 'dragon', 'series']
+const fields = {
+  identity: 'Male',
+  preference: 'Female',
+  racial: 'Asian',
+  meeting: 'Friends',
+}
+
+function goToEditProfile() {
+  router.push({ name: "edit-profile" })
+}
+
+</script>
+
 <template>
   <article
     class="relative mx-auto min-h-dvh bg-white font-[Nunito,sans-serif] flex flex-col w-full max-w-[390px]"

@@ -1,3 +1,34 @@
+<script setup>
+import ExitIcon from '@/assets/icons/exit.svg?component'
+import BaseButtonPrimary from '@/components/base/BaseButtonPrimary.vue'
+import BaseButtonSecondary from '@/components/base/BaseButtonSecondary.vue'
+
+defineProps({
+  open: {
+    type: Boolean,
+    default: false,
+  },
+  title: {
+    type: String,
+    default: "Delete Confirmation",
+  },
+  message: {
+    type: String,
+    default: "Do you sure to delete account?",
+  },
+  confirmText: {
+    type: String,
+    default: "Yes, I want to delete",
+  },
+  cancelText: {
+    type: String,
+    default: "No, I don’t",
+  },
+})
+
+const emit = defineEmits(["close", "confirm"])
+</script>
+
 <template>
   <div
     v-if="open"
@@ -43,34 +74,3 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import ExitIcon from '@/assets/icons/exit.svg?component'
-import BaseButtonPrimary from '@/components/base/BaseButtonPrimary.vue'
-import BaseButtonSecondary from '@/components/base/BaseButtonSecondary.vue'
-
-defineProps({
-  open: {
-    type: Boolean,
-    default: false,
-  },
-  title: {
-    type: String,
-    default: "Delete Confirmation",
-  },
-  message: {
-    type: String,
-    default: "Do you sure to delete account?",
-  },
-  confirmText: {
-    type: String,
-    default: "Yes, I want to delete",
-  },
-  cancelText: {
-    type: String,
-    default: "No, I don’t",
-  },
-})
-
-const emit = defineEmits(["close", "confirm"])
-</script>

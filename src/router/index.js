@@ -30,6 +30,11 @@ const router = createRouter({
     },
     { path: '/Login', component: LoginPage },
     { path: '/matching', component: MatchingPage },
+    {
+      path: '/chat/:contact?',
+      name: 'chat-room',
+      component: () => import('@/views/chat/ChatRoomPage.vue'),
+    },
   ],
 })
 

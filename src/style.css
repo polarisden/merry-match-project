@@ -164,6 +164,14 @@
     letter-spacing: 0%;
   }
 
+  .body2-w-500 {
+    font-family: "Nunito", sans-serif;
+    font-weight: 500;
+    font-size: 16px;
+    line-height: 150%;
+    letter-spacing: 0%;
+  }
+
   .body2-w-700 {
     font-family: "Nunito", sans-serif;
     font-weight: 700;

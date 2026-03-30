@@ -1,3 +1,39 @@
+<script setup>
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import BaseButtonSecondary from "@/components/base/BaseButtonSecondary.vue";
+import BaseButtonPrimary from "@/components/base/BaseButtonPrimary.vue";
+import EditProfileForm from "@/components/profile/EditProfileForm.vue";
+import ConfirmationModal from "@/components/modals/ConfirmModal.vue";
+import ProfilePreviewPopUp from "@/components/modals/ProfilePreviewPopUp.vue";
+
+const router = useRouter();
+const isDeleteModalOpen = ref(false);
+const isProfilePreviewOpen = ref(false);
+
+function goToPreviewProfile() {
+  if (window.matchMedia("(min-width: 1024px)").matches) {
+    isProfilePreviewOpen.value = true;
+    return;
+  }
+  router.push({ name: "preview-profile" });
+}
+
+function openDeleteModal() {
+  isDeleteModalOpen.value = true;
+}
+
+function closeDeleteModal() {
+  isDeleteModalOpen.value = false;
+}
+
+function confirmDeleteAccount() {
+  // TODO: connect delete account API
+  isDeleteModalOpen.value = false;
+}
+</script>
+
+
 <template>
   <main class="min-h-dvh bg-gray-100 px-4 pt-5 pb-12 lg:bg-white lg:px-10 lg:pt-10">
     <section class="mx-auto w-full max-w-[390px] flex flex-col gap-10 lg:max-w-[930px]">

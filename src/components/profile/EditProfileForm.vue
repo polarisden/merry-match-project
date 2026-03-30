@@ -1,3 +1,30 @@
+<script setup>
+import { ref } from "vue";
+import CalendarPicker from "@/components/ui/CalendarPicker.vue";
+import profilePicSrc from "@/assets/images/profile-pic.png";
+
+const emit = defineEmits(["delete-account"]);
+
+const dateOfBirth = ref("");
+
+const identityFields = [
+  { label: "Sexual identities", placeholder: "Male" },
+  { label: "Sexual preferences", placeholder: "Female" },
+  { label: "Racial preferences", placeholder: "Asian" },
+  { label: "Meeting interests", placeholder: "Friends" },
+];
+
+const interestTags = ["e-sport", "series", "dragon"];
+
+const photoSlots = [
+  { key: "photo-1", label: "Upload photo", image: profilePicSrc },
+  { key: "photo-2", label: "Upload photo", image: profilePicSrc },
+  { key: "slot-3", label: "Upload photo", image: null },
+  { key: "slot-4", label: "Upload photo", image: null },
+  { key: "slot-5", label: "Upload photo", image: null },
+];
+</script>
+
 <template>
   <div>
     <form class="space-y-9 lg:mt-10">

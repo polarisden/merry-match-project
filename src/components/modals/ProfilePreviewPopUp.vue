@@ -1,3 +1,34 @@
+<script setup>
+import ExitIcon from "@/assets/icons/exit.svg?component"
+import ArrowIcon from "@/assets/icons/arrow.svg?component"
+import XIcon from "@/assets/icons/x.svg?component"
+import HeartIcon from "@/assets/icons/heart.svg?component"
+import LocationIcon from "@/assets/icons/location.svg?component"
+import placeholderPhotoSrc from "@/assets/images/profile-pic.png"
+
+defineProps({
+  open: {
+    type: Boolean,
+    default: false,
+  },
+})
+
+const emit = defineEmits(["close"])
+
+/** Placeholder copy for layout; replace with props/store when backend is wired up. */
+const displayName = "Jon Snow"
+const displayAge = "26"
+const displayLocation = "Bangkok, Thailand"
+const aboutText = "I know nothing..but you"
+const hobbyTags = ["e-sport", "dragon", "series"]
+const fields = {
+  identity: "Male",
+  preference: "Female",
+  racial: "Asian",
+  meeting: "Friends",
+}
+</script>
+
 <template>
   <div
     v-if="open"
@@ -147,13 +178,14 @@
 </template>
 
 <script setup>
-import { watch } from "vue"
 import ExitIcon from "@/assets/icons/exit.svg?component"
 import ArrowIcon from "@/assets/icons/arrow.svg?component"
+import XIcon from "@/assets/icons/x.svg?component"
+import HeartIcon from "@/assets/icons/heart.svg?component"
 import LocationIcon from "@/assets/icons/location.svg?component"
-import { useProfilePreviewData } from "@/components/profile/composables/useProfilePreviewData"
+import placeholderPhotoSrc from "@/assets/images/profile-pic.png"
 
-const props = defineProps({
+defineProps({
   open: {
     type: Boolean,
     default: false,
@@ -162,28 +194,16 @@ const props = defineProps({
 
 const emit = defineEmits(["close"])
 
-const {
-  loading,
-  loadError,
-  loadPreview,
-  displayName,
-  displayAge,
-  displayLocation,
-  aboutText,
-  hobbyTags,
-  fields,
-  photoCount,
-  currentPhotoSrc,
-  currentPhotoNumber,
-  photoAltText,
-  showPreviousPhoto,
-  showNextPhoto,
-} = useProfilePreviewData()
-
-watch(
-  () => props.open,
-  (isOpen) => {
-    if (isOpen) loadPreview()
-  },
-)
+/** Placeholder copy for layout; replace with props/store when backend is wired up. */
+const displayName = "Jon Snow"
+const displayAge = "26"
+const displayLocation = "Bangkok, Thailand"
+const aboutText = "I know nothing..but you"
+const hobbyTags = ["e-sport", "dragon", "series"]
+const fields = {
+  identity: "Male",
+  preference: "Female",
+  racial: "Asian",
+  meeting: "Friends",
+}
 </script>
