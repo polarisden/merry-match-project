@@ -2,6 +2,10 @@
 import { computed, ref } from "vue"
 import BaseButtonPrimary from "@/components/base/BaseButtonPrimary.vue"
 import CalendarPicker from "@/components/ui/CalendarPicker.vue"
+import BaseButtonGhost from "@/components/base/BaseButtonGhost.vue"
+const ellipse2Icon = new URL("../assets/icons/Ellipse2.svg", import.meta.url).href
+const ellipse3Icon = new URL("../assets/icons/Ellipse3.svg", import.meta.url).href
+const ellipse4Icon = new URL("../assets/icons/Ellipse4.svg", import.meta.url).href
 
 const currentStep = ref(1)
 const dateOfBirth = ref("")
@@ -73,7 +77,7 @@ function goBack() {
       class="w-full max-w-[390px] lg:max-w-[930px] mx-auto bg-gray-100 lg:bg-white px-4 pt-5 pb-28 lg:px-10 lg:pt-10 lg:pb-36"
     >
       <div class="lg:flex lg:flex-row lg:items-end lg:justify-between lg:gap-8 min-w-0">
-        <div class="min-w-0 lg:max-w-[min(100%,420px)] lg:shrink">
+        <div class="relative min-w-0 lg:max-w-[min(100%,420px)] lg:shrink">
           <p class="text-[14px] tracking-widest text-beige-700 font-semibold uppercase">
             Register
           </p>
@@ -85,6 +89,19 @@ function goBack() {
             <br />
             matching
           </h1>
+
+          <img
+            :src="ellipse2Icon"
+            alt=""
+            aria-hidden="true"
+            class="hidden lg:block fixed left-0 top-[86px] w-[81px] h-[100px] pointer-events-none select-none z-10"
+          />
+          <img
+            :src="ellipse3Icon"
+            alt=""
+            aria-hidden="true"
+            class="hidden lg:block fixed left-[80px] top-[210px] w-2 h-2 pointer-events-none select-none z-10"
+          />
         </div>
 
         <div
@@ -164,7 +181,7 @@ function goBack() {
 
       <form
         v-else
-        class="mt-4 space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-x-10 lg:gap-y-6"
+        class="mt-4 space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-x-10 lg:gap-y-6 lg:relative"
       >
         <div
           v-for="field in fields"
@@ -221,6 +238,13 @@ function goBack() {
             </span>
           </div>
         </div>
+
+        <img
+          :src="ellipse4Icon"
+          alt=""
+          aria-hidden="true"
+          class="hidden lg:block fixed right-0 bottom-[230px] w-[45px] h-[59px] pointer-events-none select-none z-10"
+        />
       </form>
     </div>
 
@@ -229,14 +253,13 @@ function goBack() {
         <span class="body2 text-gray-700">{{ currentStep }}<span class="text-gray-600">/3</span></span>
 
         <div class="flex items-center gap-4">
-          <button
-            type="button"
-            class="text-[13px] font-semibold text-gray-400 disabled:opacity-100"
+          <BaseButtonGhost
             :disabled="!canGoBack"
+            :show-arrow="true"
             @click="goBack"
           >
-            ← Back
-          </button>
+            Back
+          </BaseButtonGhost>
 
           <BaseButtonPrimary @click="goNext">
             {{ nextLabel }}
