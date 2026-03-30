@@ -44,7 +44,7 @@
     </section>
 
     <div class="h-full px-4 py-6 flex flex-col gap-2">
-      <h1 class="m-0 flex flex-wrap items-baseline gap-2">
+      <h1 class="m-0 flex flex-wrap items-baseline gap-4">
         <span class="headline2">
           {{ displayName }}
         </span>

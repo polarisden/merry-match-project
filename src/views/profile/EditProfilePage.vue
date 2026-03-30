@@ -28,7 +28,7 @@
       </EditProfileForm>
     </section>
 
-    <ProfilePreviewModal
+    <ProfilePreviewPopUp
       :open="isProfilePreviewOpen"
       @close="isProfilePreviewOpen = false"
     />
@@ -52,7 +52,7 @@ import BaseButtonSecondary from "@/components/base/BaseButtonSecondary.vue";
 import BaseButtonPrimary from "@/components/base/BaseButtonPrimary.vue";
 import EditProfileForm from "@/components/profile/EditProfileForm.vue";
 import ConfirmationModal from "@/components/modals/ConfirmModal.vue";
-import ProfilePreviewModal from "@/components/modals/ProfilePreviewModal.vue";
+import ProfilePreviewPopUp from "@/components/modals/ProfilePreviewPopUp.vue";
 
 const router = useRouter();
 const isDeleteModalOpen = ref(false);
