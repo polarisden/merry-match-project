@@ -38,7 +38,7 @@ const stepFields = {
   ],
 }
 
-const interestTags = ["esport", "series", "dragon"]
+const interestTags = ref([])
 
 const totalPhotoSlots = 5
 const selectedPhotos = ref([])
@@ -65,6 +65,8 @@ const formValues = reactive({
   meetingInterest: "Dating",
 })
 const openDropdown = ref(null)
+const selectedInterestTags = ref([])
+const interestOptions = ref([])
 const sexualIdentityOptions = ["Male", "Female", "LGBTQIAN+"]
 const sexualPreferenceOptions = ["Male", "Female", "LGBTQIAN+"]
 const racialPreferenceOptions = [
@@ -189,6 +191,24 @@ function handleDocumentClick(event) {
   }
 }
 
+function selectInterestTag(tag) {
+  if (selectedInterestTags.value.includes(tag)) return
+  if (selectedInterestTags.value.length >= 10) return
+  selectedInterestTags.value.push(tag)
+}
+
+function removeInterestTag(tag) {
+  selectedInterestTags.value = selectedInterestTags.value.filter((item) => item !== tag)
+}
+
+function toggleInterestTag(tag) {
+  if (selectedInterestTags.value.includes(tag)) {
+    removeInterestTag(tag)
+    return
+  }
+  selectInterestTag(tag)
+}
+
 function triggerPhotoPicker() {
   photoInputRef.value?.click()
 }
@@ -218,6 +238,76 @@ function readFileAsDataURL(file) {
     reader.onerror = () => reject(new Error("Failed to read photo file"))
     reader.readAsDataURL(file)
   })
+}
+
+async function fetchInterests() {
+  try {
+    const res = await fetch("/api/interests")
+    if (!res.ok) return
+
+    const contentType = res.headers.get("content-type") ?? ""
+    const body = contentType.includes("application/json") ? await res.json() : []
+    const list = Array.isArray(body) ? body : Array.isArray(body?.data) ? body.data : []
+
+    interestOptions.value = list
+      .map((item) => {
+        if (typeof item === "string") return { id: "", name: item }
+        return { id: String(item?.id ?? ""), name: String(item?.name ?? "") }
+      })
+      .filter((item) => item.name.trim().length > 0)
+
+    interestTags.value = interestOptions.value
+      .map((item) => item.name)
+      .filter((name) => typeof name === "string" && name.trim().length > 0)
+  } catch {
+    interestOptions.value = []
+    interestTags.value = []
+  }
+}
+
+async function submitMyInterests(token) {
+  if (!token || selectedInterestTags.value.length === 0) return true
+
+  const selectedInterestIds = interestOptions.value
+    .filter((item) => selectedInterestTags.value.includes(item.name) && item.id)
+    .map((item) => item.id)
+
+  const payloadCandidates = [
+    { interestIds: selectedInterestIds },
+    { interests: selectedInterestTags.value },
+    { interest_names: selectedInterestTags.value },
+    selectedInterestIds,
+    selectedInterestTags.value,
+  ].filter((payload) => {
+    if (Array.isArray(payload)) return payload.length > 0
+    if (payload?.interestIds) return payload.interestIds.length > 0
+    return true
+  })
+
+  let lastErrorMessage = ""
+
+  for (const payload of payloadCandidates) {
+    const res = await fetch("/api/users/me/interests", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    })
+
+    if (res.ok) return true
+
+    const contentType = res.headers.get("content-type") ?? ""
+    const body = contentType.includes("application/json") ? await res.json() : await res.text()
+    lastErrorMessage =
+      typeof body === "string"
+        ? body
+        : body?.message ?? body?.error ?? `Save interests failed with status ${res.status}`
+  }
+
+  registerError.value = lastErrorMessage || "Save interests failed."
+  return false
 }
 
 /** Ensures JSON.stringify never drops keys due to undefined (backend often treats missing keys as empty). */
@@ -528,6 +618,7 @@ async function submitRegister() {
     }
 
     // Success: store token (if backend returns one) and auto-login
+    let authToken = ""
     if (typeof body === "object" && body) {
       const token =
         body.token ??
@@ -538,9 +629,15 @@ async function submitRegister() {
         body.data?.access_token
 
       if (token && typeof token === "string") {
+        authToken = token
         localStorage.setItem("token", token)
       }
     }
+
+    // Save selected interests after register success.
+    if (!authToken) authToken = localStorage.getItem("token") ?? ""
+    const interestsSaved = await submitMyInterests(authToken)
+    if (!interestsSaved) return
 
     // Go to home after successful register (with photos)
     router.push("/")
@@ -553,6 +650,7 @@ async function submitRegister() {
 
 onMounted(() => {
   document.addEventListener("click", handleDocumentClick)
+  fetchInterests()
 })
 
 onBeforeUnmount(() => {
@@ -1040,13 +1138,42 @@ function goBack() {
           </label>
           <div class="w-full min-h-11 px-2 py-2 border border-gray-300 rounded-lg bg-gray-100 lg:bg-white flex flex-wrap gap-1.5">
             <span
-              v-for="tag in interestTags"
-              :key="tag"
+              v-if="selectedInterestTags.length === 0"
+              class="body2 text-gray-500 px-1 py-0.5"
+            >
+              Select interests
+            </span>
+            <button
+              v-for="tag in selectedInterestTags"
+              :key="`selected-${tag}`"
+              type="button"
               class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-purple-100 body4 text-purple-500 leading-none"
+              @click="removeInterestTag(tag)"
             >
               {{ tag }} <span class="text-purple-300">x</span>
-            </span>
+            </button>
           </div>
+
+          <div class="mt-2 w-full rounded-xl border border-gray-200 bg-gray-100 lg:bg-white shadow-sm p-2 max-h-56 overflow-y-auto flex flex-wrap gap-2">
+            <button
+              v-for="tag in interestTags"
+              :key="tag"
+              type="button"
+              class="px-3 py-1.5 rounded-md body2 border transition"
+              :class="selectedInterestTags.includes(tag)
+                ? 'border-purple-300 bg-purple-100 text-purple-500'
+                : 'border-gray-300 text-gray-700 hover:bg-gray-200'"
+              :disabled="!selectedInterestTags.includes(tag) && selectedInterestTags.length >= 10"
+              @click="toggleInterestTag(tag)"
+            >
+              {{ tag }}
+            </button>
+          </div>
+
+          <div class="mt-2 text-xs text-gray-500">
+            {{ selectedInterestTags.length }}/10 selected
+          </div>
+
         </div>
 
         <img
