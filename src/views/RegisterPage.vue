@@ -1,15 +1,17 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { Country, State } from "country-state-city"
+import { useRouter } from "vue-router"
 import BaseButtonPrimary from "@/components/base/BaseButtonPrimary.vue"
 import CalendarPicker from "@/components/ui/CalendarPicker.vue"
 import BaseButtonGhost from "@/components/base/BaseButtonGhost.vue"
+
+const router = useRouter()
 const ellipse2Icon = new URL("../assets/icons/Ellipse2.svg", import.meta.url).href
 const ellipse3Icon = new URL("../assets/icons/Ellipse3.svg", import.meta.url).href
 const ellipse4Icon = new URL("../assets/icons/Ellipse4.svg", import.meta.url).href
 
 const currentStep = ref(1)
-const dateOfBirth = ref("")
 
 const steps = [
   { title: "Basic Information" },
@@ -19,29 +21,29 @@ const steps = [
 
 const stepFields = {
   1: [
-    { label: "Name", type: "text", placeholder: "Jon Snow" },
-    { label: "Date of birth", type: "date", placeholder: "01/01/2008" },
-    { label: "Location", type: "select", placeholder: "Thailand" },
-    { label: "City", type: "select", placeholder: "Select city" },
-    { label: "Username", type: "text", placeholder: "At least 6 character" },
-    { label: "Email", type: "email", placeholder: "name@website.com" },
-    { label: "Password", type: "password", placeholder: "At least 8 character" },
-    { label: "Confirm password", type: "password", placeholder: "At least 8 character" },
+    { label: "Name", modelKey: "name", type: "text", placeholder: "Jon Snow" },
+    { label: "Date of birth", modelKey: "dateOfBirth", type: "date", placeholder: "01/01/2008" },
+    { label: "Location", modelKey: "location", type: "select", placeholder: "Thailand" },
+    { label: "City", modelKey: "city", type: "select", placeholder: "Select city" },
+    { label: "Username", modelKey: "username", type: "text", placeholder: "At least 6 character" },
+    { label: "Email", modelKey: "email", type: "email", placeholder: "name@website.com" },
+    { label: "Password", modelKey: "password", type: "password", placeholder: "At least 8 character" },
+    { label: "Confirm password", modelKey: "confirmPassword", type: "password", placeholder: "At least 8 character" },
   ],
   2: [
-    { label: "Sexual identities", type: "select", placeholder: "Male" },
-    { label: "Sexual preferences", type: "select", placeholder: "Female" },
-    { label: "Racial preferences", type: "select", placeholder: "Asian" },
-    { label: "Meeting interests", type: "select", placeholder: "Friends" },
+    { label: "Sexual identities", modelKey: "sexualIdentity", type: "select", placeholder: "Male" },
+    { label: "Sexual preferences", modelKey: "sexualPreference", type: "select", placeholder: "Female" },
+    { label: "Racial preferences", modelKey: "racialPreference", type: "select", placeholder: "Asian" },
+    { label: "Meeting interests", modelKey: "meetingInterest", type: "select", placeholder: "Friends" },
   ],
 }
 
 const interestTags = ["esport", "series", "dragon"]
-const uploadedPhotos = [
-  { name: "Photo 1" },
-  { name: "Photo 2" },
-]
+
 const totalPhotoSlots = 5
+const selectedPhotos = ref([])
+const photoInputRef = ref(null)
+const photoObjectUrlsToRevoke = ref([])
 const countries = Country.getAllCountries()
 const defaultLocation = "TH"
 const defaultBangkok =
@@ -49,8 +51,14 @@ const defaultBangkok =
     state.name.toLowerCase().includes("bangkok"),
   )?.isoCode ?? ""
 const formValues = reactive({
+  name: "",
+  dateOfBirth: "",
   location: defaultLocation,
   city: defaultBangkok,
+  username: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
   sexualIdentity: "",
   sexualPreference: "",
   racialPreference: "Asia",
@@ -89,17 +97,22 @@ const activeStep = computed(() => steps[currentStep.value - 1])
 const fields = computed(() => stepFields[currentStep.value])
 const photoSlots = computed(() =>
   Array.from({ length: totalPhotoSlots }, (_, index) => {
-    const isUploaded = index < uploadedPhotos.length
+    const photo = selectedPhotos.value[index]
 
     return {
-      key: isUploaded ? uploadedPhotos[index].name : `slot-${index + 1}`,
-      label: isUploaded ? "Upload photo" : "Upload photo",
+      key: photo ? photo.file.name : `slot-${index + 1}`,
+      label: photo ? "Change photo" : "Upload photo",
+      previewUrl: photo?.previewUrl ?? "",
     }
   }),
 )
 
 const canGoBack = computed(() => currentStep.value > 1)
 const nextLabel = computed(() => (currentStep.value === 3 ? "Confirm" : "Next step"))
+
+const registerLoading = ref(false)
+const registerError = ref("")
+
 const locationOptions = computed(() =>
   countries.map((country) => ({
     value: country.isoCode,
@@ -176,24 +189,410 @@ function handleDocumentClick(event) {
   }
 }
 
+function triggerPhotoPicker() {
+  photoInputRef.value?.click()
+}
+
+function handleSelectedPhotos(event) {
+  const input = event.target
+  if (!input?.files?.length) return
+
+  const files = Array.from(input.files)
+  const remainingSlots = totalPhotoSlots - selectedPhotos.value.length
+  const toAdd = files.slice(0, Math.max(0, remainingSlots))
+
+  for (const file of toAdd) {
+    const previewUrl = URL.createObjectURL(file)
+    photoObjectUrlsToRevoke.value.push(previewUrl)
+    selectedPhotos.value.push({ file, previewUrl })
+  }
+
+  // Allow selecting the same file again later
+  input.value = ""
+}
+
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(new Error("Failed to read photo file"))
+    reader.readAsDataURL(file)
+  })
+}
+
+/** Ensures JSON.stringify never drops keys due to undefined (backend often treats missing keys as empty). */
+function strField(value) {
+  if (value === undefined || value === null) return ""
+  return typeof value === "string" ? value.trim() : String(value).trim()
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+function parseDuplicateCheckResult(body, field) {
+  if (typeof body === "boolean") {
+    return { available: body, message: body ? "" : "This value is already in use." }
+  }
+
+  if (!body || typeof body !== "object") {
+    return { available: true, message: "" }
+  }
+
+  // Supports common API shapes:
+  // { available: boolean }, { exists: boolean }, { isDuplicate: boolean }, { duplicate: boolean }
+  if (typeof body.available === "boolean") {
+    return { available: body.available, message: body.message ?? "" }
+  }
+  if (typeof body.exists === "boolean") {
+    return { available: !body.exists, message: body.message ?? "" }
+  }
+  if (typeof body.isDuplicate === "boolean") {
+    return { available: !body.isDuplicate, message: body.message ?? "" }
+  }
+  if (typeof body.duplicate === "boolean") {
+    return { available: !body.duplicate, message: body.message ?? "" }
+  }
+  if (field === "username" && typeof body.usernameAvailable === "boolean") {
+    return { available: body.usernameAvailable, message: body.message ?? "" }
+  }
+  if (field === "email" && typeof body.emailAvailable === "boolean") {
+    return { available: body.emailAvailable, message: body.message ?? "" }
+  }
+
+  return { available: true, message: "" }
+}
+
+function isDuplicateMessage(message) {
+  if (!message) return false
+  const normalized = String(message).toLowerCase()
+  return (
+    normalized.includes("already") ||
+    normalized.includes("duplicate") ||
+    normalized.includes("exists") ||
+    normalized.includes("taken") ||
+    normalized.includes("in use")
+  )
+}
+
+async function checkDuplicateField(field, value) {
+  const requests =
+    field === "email"
+      ? [
+          { url: `/api/auth/check-availability?email=${encodeURIComponent(value)}`, method: "GET" },
+          {
+            url: "/api/auth/check-availability",
+            method: "POST",
+            body: JSON.stringify({ email: value }),
+          },
+          { url: `/api/auth/check-email?email=${encodeURIComponent(value)}`, method: "GET" },
+          { url: `/api/auth/check-duplicate?email=${encodeURIComponent(value)}`, method: "GET" },
+          {
+            url: "/api/auth/check-duplicate",
+            method: "POST",
+            body: JSON.stringify({ email: value }),
+          },
+        ]
+      : [
+          {
+            url: `/api/auth/check-availability?username=${encodeURIComponent(value)}`,
+            method: "GET",
+          },
+          {
+            url: "/api/auth/check-availability",
+            method: "POST",
+            body: JSON.stringify({ username: value }),
+          },
+          { url: `/api/auth/check-username?username=${encodeURIComponent(value)}`, method: "GET" },
+          { url: `/api/auth/check-duplicate?username=${encodeURIComponent(value)}`, method: "GET" },
+          {
+            url: "/api/auth/check-duplicate",
+            method: "POST",
+            body: JSON.stringify({ username: value }),
+          },
+        ]
+
+  let sawReachableEndpoint = false
+
+  for (const request of requests) {
+    try {
+      const res = await fetch(request.url, {
+        method: request.method,
+        headers: request.method === "POST" ? { "Content-Type": "application/json" } : undefined,
+        body: request.body,
+      })
+
+      // Try next endpoint if route is not found.
+      if (res.status === 404) continue
+      sawReachableEndpoint = true
+
+      // Some APIs return 409 on duplicate check, but not all 409 mean duplicate.
+      if (res.status === 409) {
+        const contentType = res.headers.get("content-type") ?? ""
+        const body = contentType.includes("application/json") ? await res.json() : await res.text()
+        const message =
+          typeof body === "string" ? body : body?.message ?? body?.error ?? ""
+
+        return {
+          available: !isDuplicateMessage(message),
+          message:
+            message ||
+            (field === "email" ? "Email is already in use." : "Username is already in use."),
+        }
+      }
+
+      const contentType = res.headers.get("content-type") ?? ""
+      const body = contentType.includes("application/json") ? await res.json() : await res.text()
+
+      if (!res.ok) {
+        const fallbackMessage =
+          field === "email"
+            ? "Unable to verify email right now."
+            : "Unable to verify username right now."
+
+        return {
+          available: false,
+          message:
+            typeof body === "string" ? body : body?.message ?? body?.error ?? fallbackMessage,
+        }
+      }
+
+      return parseDuplicateCheckResult(body, field)
+    } catch {
+      // Try fallback endpoint
+    }
+  }
+
+  // If duplicate-check API is not reachable, block Next.
+  if (!sawReachableEndpoint) {
+    return {
+      available: false,
+      message:
+        field === "email"
+          ? "Cannot verify email uniqueness right now."
+          : "Cannot verify username uniqueness right now.",
+    }
+  }
+
+  // Endpoint is reachable but response format is unclear: block and ask user to retry.
+  return {
+    available: false,
+    message:
+      field === "email"
+        ? "Unable to verify email. Please try again."
+        : "Unable to verify username. Please try again.",
+  }
+}
+
+function validateStepBeforeNext(stepNumber) {
+  const fieldsForStep = stepFields[stepNumber] ?? []
+
+  for (const field of fieldsForStep) {
+    const rawValue = formValues[field.modelKey]
+    const value = typeof rawValue === "string" ? rawValue.trim() : rawValue
+    if (!value) {
+      registerError.value = `Please enter ${field.label.toLowerCase()}.`
+      return false
+    }
+  }
+
+  if (stepNumber === 1 && formValues.password !== formValues.confirmPassword) {
+    registerError.value = "Passwords do not match."
+    return false
+  }
+
+  if (stepNumber === 1 && strField(formValues.password).length < 8) {
+    registerError.value = "Password must be at least 8 characters."
+    return false
+  }
+
+  if (stepNumber === 1 && !isValidEmail(strField(formValues.email))) {
+    registerError.value = "Please enter a valid email address."
+    return false
+  }
+
+  return true
+}
+
+async function validateStep1UniqueFields() {
+  const username = strField(formValues.username)
+  const email = strField(formValues.email).toLowerCase()
+
+  const usernameCheck = await checkDuplicateField("username", username)
+  if (!usernameCheck.available) {
+    registerError.value = usernameCheck.message || "Username is already in use."
+    return false
+  }
+
+  const emailCheck = await checkDuplicateField("email", email)
+  if (!emailCheck.available) {
+    registerError.value = emailCheck.message || "Email is already in use."
+    return false
+  }
+
+  return true
+}
+
+async function submitRegister() {
+  registerError.value = ""
+
+  // Basic front-end validation. Backend will still be the source of truth.
+  if (!strField(formValues.name)) return (registerError.value = "Please enter your name.")
+  if (!strField(formValues.dateOfBirth)) return (registerError.value = "Please select your date of birth.")
+  if (!strField(formValues.username)) return (registerError.value = "Please enter your username.")
+  if (!strField(formValues.email)) return (registerError.value = "Please enter your email.")
+  if (!isValidEmail(strField(formValues.email))) return (registerError.value = "Please enter a valid email address.")
+  if (!strField(formValues.password)) return (registerError.value = "Please enter your password.")
+  if (strField(formValues.password).length < 8) return (registerError.value = "Password must be at least 8 characters.")
+  if (formValues.password !== formValues.confirmPassword) return (registerError.value = "Passwords do not match.")
+
+  if (!strField(formValues.sexualIdentity)) return (registerError.value = "Please select your sexual identity.")
+  if (!strField(formValues.sexualPreference)) return (registerError.value = "Please select your sexual preference.")
+  if (!strField(formValues.racialPreference)) return (registerError.value = "Please select your racial preference.")
+  if (!strField(formValues.meetingInterest)) return (registerError.value = "Please select your meeting interest.")
+
+  if (selectedPhotos.value.length < 2) return (registerError.value = "Please upload at least 2 photos.")
+
+  try {
+    registerLoading.value = true
+
+    // Read photos as data URLs (backend expects photos in register payload)
+    const photos = await Promise.all(
+      selectedPhotos.value.map((p) => readFileAsDataURL(p.file)),
+    )
+
+    const name = strField(formValues.name)
+    const dateOfBirth = strField(formValues.dateOfBirth)
+    const locationCode = strField(formValues.location)
+    const cityCode = strField(formValues.city)
+    const locationName = selectedLocationLabel.value || locationCode
+    const cityName = selectedCityLabel.value || cityCode
+    const username = strField(formValues.username)
+    const email = strField(formValues.email).toLowerCase()
+    const password = strField(formValues.password)
+    const confirmPassword = strField(formValues.confirmPassword)
+    const sexualIdentity = strField(formValues.sexualIdentity)
+    const sexualPreference = strField(formValues.sexualPreference)
+    const racialPreference = strField(formValues.racialPreference)
+    const meetingInterest = strField(formValues.meetingInterest)
+
+    const payload = {
+      name,
+      dateOfBirth,
+      // Send full names to backend for these fields
+      location: locationName,
+      city: cityName,
+      username,
+      email,
+      password,
+      confirmPassword,
+      sexualIdentity,
+      sexualPreference,
+      racialPreference,
+      meetingInterest,
+      photos,
+      // Many Java/Spring APIs expect snake_case JSON keys — mirror values so nothing is "missing" by name.
+      date_of_birth: dateOfBirth,
+      confirm_password: confirmPassword,
+      sexual_identity: sexualIdentity,
+      sexual_preference: sexualPreference,
+      racial_preference: racialPreference,
+      meeting_interest: meetingInterest,
+      // Backend-specific keys requested by API mapping
+      gendar: sexualIdentity,
+      // Use full names for country/city
+      location_country: locationName,
+      location_city: cityName,
+      // Keep codes too in case backend still needs them
+      location_code: locationCode,
+      city_code: cityCode,
+    }
+
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+
+    const contentType = res.headers.get("content-type") ?? ""
+    const body = contentType.includes("application/json") ? await res.json() : await res.text()
+
+    if (!res.ok) {
+      registerError.value =
+        typeof body === "string"
+          ? body
+          : body?.message ?? body?.error ?? `Register failed with status ${res.status}`
+      return
+    }
+
+    // Success: store token (if backend returns one) and auto-login
+    if (typeof body === "object" && body) {
+      const token =
+        body.token ??
+        body.accessToken ??
+        body.access_token ??
+        body.data?.token ??
+        body.data?.accessToken ??
+        body.data?.access_token
+
+      if (token && typeof token === "string") {
+        localStorage.setItem("token", token)
+      }
+    }
+
+    // Go to home after successful register (with photos)
+    router.push("/")
+  } catch (e) {
+    registerError.value = e instanceof Error ? e.message : "Register failed"
+  } finally {
+    registerLoading.value = false
+  }
+}
+
 onMounted(() => {
   document.addEventListener("click", handleDocumentClick)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener("click", handleDocumentClick)
+
+  // Revoke object URLs created for image previews
+  for (const url of photoObjectUrlsToRevoke.value) {
+    URL.revokeObjectURL(url)
+  }
 })
 
-function goNext() {
+async function goNext() {
+  if (registerLoading.value) return
+  registerError.value = ""
+
   if (currentStep.value < 3) {
+    const canProceed = validateStepBeforeNext(currentStep.value)
+    if (!canProceed) return
+
+    if (currentStep.value === 1) {
+      registerLoading.value = true
+      try {
+        const isUnique = await validateStep1UniqueFields()
+        if (!isUnique) return
+      } finally {
+        registerLoading.value = false
+      }
+    }
+
     currentStep.value += 1
+    return
   }
+
+  // Step 3: submit
+  submitRegister()
 }
 
 function goBack() {
-  if (currentStep.value > 1) {
-    currentStep.value -= 1
-  }
+  if (registerLoading.value) return
+  if (currentStep.value > 1) currentStep.value -= 1
 }
 </script>
 
@@ -290,23 +689,61 @@ function goBack() {
           Upload at least 2 photos
         </p>
 
+        <input
+          ref="photoInputRef"
+          id="register-photo-input"
+          type="file"
+          accept="image/*"
+          multiple
+          class="sr-only"
+          @change="handleSelectedPhotos"
+        />
+
         <div class="mt-3 grid grid-cols-2 lg:grid-cols-5 gap-2 lg:gap-4">
           <button
             v-for="slot in photoSlots"
             :key="slot.key"
             type="button"
-            class="h-[120px] lg:h-[156px] rounded-xl bg-gray-200/80 flex flex-col items-center justify-center text-purple-500"
+            class="h-[120px] lg:h-[156px] rounded-xl bg-gray-200/80 flex flex-col items-center justify-center text-purple-500 relative overflow-hidden"
+            @click="triggerPhotoPicker"
           >
-            <span class="text-[26px] leading-none">+</span>
-            <span class="text-[13px] mt-1">{{ slot.label }}</span>
+            <img
+              v-if="slot.previewUrl"
+              :src="slot.previewUrl"
+              alt=""
+              class="absolute inset-0 w-full h-full object-cover"
+            />
+            <div class="relative z-10">
+              <span
+                v-if="!slot.previewUrl"
+                class="text-[26px] leading-none"
+              >
+                +
+              </span>
+              <span class="text-[13px] mt-1">{{ slot.label }}</span>
+            </div>
           </button>
         </div>
+
+        <p
+          v-if="registerError"
+          class="mt-3 text-red-500 text-sm"
+        >
+          {{ registerError }}
+        </p>
       </div>
 
       <form
         v-else
         class="mt-4 space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-x-10 lg:gap-y-6 lg:relative"
       >
+        <p
+          v-if="registerError"
+          class="col-span-2 mt-1 text-red-500 text-sm"
+        >
+          {{ registerError }}
+        </p>
+
         <div
           v-for="field in fields"
           :key="`${field.label}-${field.placeholder}`"
@@ -318,14 +755,15 @@ function goBack() {
           <div class="relative">
             <CalendarPicker
               v-if="field.type === 'date'"
-              v-model="dateOfBirth"
+              v-model="formValues[field.modelKey]"
               :placeholder="field.placeholder"
             />
 
             <input
               v-else-if="field.type !== 'select'"
               :type="field.type"
-              class="w-full h-11 px-3 pr-10 border border-gray-300 rounded-lg bg-gray-100 lg:bg-white placeholder:text-gray-500 body2 outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-300"
+              v-model="formValues[field.modelKey]"
+              class="w-full h-11 px-3 pr-10 border border-gray-300 rounded-lg bg-gray-100 lg:bg-white placeholder:text-gray-500 body2 text-black outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-300"
               :placeholder="field.placeholder"
             />
 
@@ -336,10 +774,15 @@ function goBack() {
             >
               <button
                 type="button"
-                class="w-full h-11 px-4 border border-gray-300 rounded-xl bg-gray-100 lg:bg-white body2 text-gray-700 outline-none flex items-center justify-between"
+                class="w-full h-11 px-4 border border-gray-300 rounded-xl bg-gray-100 lg:bg-white body2 outline-none flex items-center justify-between"
                 @click.stop="toggleDropdown('location')"
               >
-                <span class="truncate text-left text-gray-600">{{ selectedLocationLabel || field.placeholder }}</span>
+                <span
+                  class="truncate text-left"
+                  :class="selectedLocationLabel ? 'text-black' : 'text-gray-600'"
+                >
+                  {{ selectedLocationLabel || field.placeholder }}
+                </span>
                 <span
                   class="text-[10px] text-gray-500 transition-transform"
                   :class="{ 'rotate-180': openDropdown === 'location' }"
@@ -372,10 +815,13 @@ function goBack() {
               <button
                 type="button"
                 :disabled="!formValues.location || !cityOptions.length"
-                class="w-full h-11 px-4 border border-gray-300 rounded-xl bg-gray-100 lg:bg-white body2 text-gray-700 outline-none flex items-center justify-between disabled:bg-gray-200 disabled:text-gray-400"
+                class="w-full h-11 px-4 border border-gray-300 rounded-xl bg-gray-100 lg:bg-white body2 outline-none flex items-center justify-between disabled:bg-gray-200 disabled:text-gray-400"
                 @click.stop="toggleDropdown('city')"
               >
-                <span class="truncate text-left text-gray-600">
+                <span
+                  class="truncate text-left"
+                  :class="selectedCityLabel ? 'text-black' : 'text-gray-600'"
+                >
                   {{ selectedCityLabel || (formValues.location ? field.placeholder : "Select country first") }}
                 </span>
                 <span
@@ -409,10 +855,15 @@ function goBack() {
             >
               <button
                 type="button"
-                class="w-full h-11 px-4 border border-gray-300 rounded-xl bg-gray-100 lg:bg-white body2 text-gray-700 outline-none flex items-center justify-between"
+                class="w-full h-11 px-4 border border-gray-300 rounded-xl bg-gray-100 lg:bg-white body2 outline-none flex items-center justify-between"
                 @click.stop="toggleDropdown('sexualIdentity')"
               >
-                <span class="truncate text-left text-gray-600">{{ selectedSexualIdentityLabel || field.placeholder }}</span>
+                <span
+                  class="truncate text-left"
+                  :class="selectedSexualIdentityLabel ? 'text-black' : 'text-gray-600'"
+                >
+                  {{ selectedSexualIdentityLabel || field.placeholder }}
+                </span>
                 <span
                   class="text-[10px] text-gray-500 transition-transform"
                   :class="{ 'rotate-180': openDropdown === 'sexualIdentity' }"
@@ -444,10 +895,15 @@ function goBack() {
             >
               <button
                 type="button"
-                class="w-full h-11 px-4 border border-gray-300 rounded-xl bg-gray-100 lg:bg-white body2 text-gray-700 outline-none flex items-center justify-between"
+                class="w-full h-11 px-4 border border-gray-300 rounded-xl bg-gray-100 lg:bg-white body2 outline-none flex items-center justify-between"
                 @click.stop="toggleDropdown('sexualPreference')"
               >
-                <span class="truncate text-left text-gray-600">{{ selectedSexualPreferenceLabel || field.placeholder }}</span>
+                <span
+                  class="truncate text-left"
+                  :class="selectedSexualPreferenceLabel ? 'text-black' : 'text-gray-600'"
+                >
+                  {{ selectedSexualPreferenceLabel || field.placeholder }}
+                </span>
                 <span
                   class="text-[10px] text-gray-500 transition-transform"
                   :class="{ 'rotate-180': openDropdown === 'sexualPreference' }"
@@ -479,10 +935,15 @@ function goBack() {
             >
               <button
                 type="button"
-                class="w-full h-11 px-4 border border-gray-300 rounded-xl bg-gray-100 lg:bg-white body2 text-gray-700 outline-none flex items-center justify-between"
+                class="w-full h-11 px-4 border border-gray-300 rounded-xl bg-gray-100 lg:bg-white body2 outline-none flex items-center justify-between"
                 @click.stop="toggleDropdown('racialPreference')"
               >
-                <span class="truncate text-left text-gray-600">{{ selectedRacialPreferenceLabel || field.placeholder }}</span>
+                <span
+                  class="truncate text-left"
+                  :class="selectedRacialPreferenceLabel ? 'text-black' : 'text-gray-600'"
+                >
+                  {{ selectedRacialPreferenceLabel || field.placeholder }}
+                </span>
                 <span
                   class="text-[10px] text-gray-500 transition-transform"
                   :class="{ 'rotate-180': openDropdown === 'racialPreference' }"
@@ -514,10 +975,13 @@ function goBack() {
             >
               <button
                 type="button"
-                class="w-full h-11 px-4 border border-gray-300 rounded-xl bg-gray-100 lg:bg-white body2 text-gray-700 outline-none flex items-center justify-between"
+                class="w-full h-11 px-4 border border-gray-300 rounded-xl bg-gray-100 lg:bg-white body2 outline-none flex items-center justify-between"
                 @click.stop="toggleDropdown('meetingInterest')"
               >
-                <span class="truncate text-left text-gray-600">
+                <span
+                  class="truncate text-left"
+                  :class="selectedMeetingInterestLabel ? 'text-black' : 'text-gray-600'"
+                >
                   {{ selectedMeetingInterestLabel || field.placeholder }}
                 </span>
                 <span
@@ -547,6 +1011,7 @@ function goBack() {
             <select
               v-else
               class="w-full h-11 px-3 pr-8 border border-gray-300 rounded-lg bg-gray-100 lg:bg-white body2 text-gray-600 appearance-none outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-300"
+              v-model="formValues[field.modelKey]"
             >
               <option
                 value=""
@@ -608,8 +1073,11 @@ function goBack() {
             Back
           </BaseButtonGhost>
 
-          <BaseButtonPrimary @click="goNext">
-            {{ nextLabel }}
+          <BaseButtonPrimary
+            :disabled="registerLoading"
+            @click="goNext"
+          >
+            {{ registerLoading ? "Loading..." : nextLabel }}
           </BaseButtonPrimary>
         </div>
       </div>
