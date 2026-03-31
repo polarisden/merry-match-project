@@ -7,10 +7,15 @@ export function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
-export function validateStepBeforeNext(stepNumber, stepFields, formValues) {
+export function validateStepBeforeNext(stepNumber, stepFields, formValues, cityOptions = []) {
   const fieldsForStep = stepFields[stepNumber] ?? []
 
   for (const field of fieldsForStep) {
+    // Some countries have no city/state list; allow empty city in that case.
+    if (field.modelKey === "city" && stepNumber === 1 && cityOptions.length === 0) {
+      continue
+    }
+
     const rawValue = formValues[field.modelKey]
     const value = typeof rawValue === "string" ? rawValue.trim() : rawValue
     if (!value) {

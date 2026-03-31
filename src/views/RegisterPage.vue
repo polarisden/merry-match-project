@@ -98,7 +98,7 @@ async function submitMyInterests(token) {
 }
 
 function validateStepBeforeNext(stepNumber) {
-  const result = validateStepBeforeNextRule(stepNumber, stepFields, formValues)
+  const result = validateStepBeforeNextRule(stepNumber, stepFields, formValues, cityOptions.value)
   if (!result.valid) {
     registerError.value = result.message
     return false
