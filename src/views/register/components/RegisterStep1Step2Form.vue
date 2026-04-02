@@ -2,7 +2,8 @@
   <form class="mt-4 space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-x-10 lg:gap-y-6 lg:relative">
     <p
       v-if="registerError"
-      class="col-span-2 mt-1 text-red-500 text-sm"
+      class="col-span-2 rounded-lg border border-red-200 bg-red-100 px-3 py-2 body2 text-red-700"
+      role="alert"
     >
       {{ registerError }}
     </p>
@@ -24,11 +25,80 @@
 
         <input
           v-else-if="field.type !== 'select'"
-          :type="field.type"
+          :type="field.type === 'password' ? (isPasswordVisible(field.modelKey) ? 'text' : 'password') : field.type"
           v-model="formValues[field.modelKey]"
           class="w-full h-11 px-3 pr-10 border border-gray-300 rounded-lg bg-gray-100 lg:bg-white placeholder:text-gray-500 body2 text-black outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-300"
           :placeholder="field.placeholder"
         />
+        <button
+          v-if="field.type === 'password'"
+          type="button"
+          class="absolute right-2 top-1/2 -translate-y-1/2 grid size-9 place-items-center rounded-md text-gray-600 hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-200 hover:cursor-pointer"
+          :aria-label="isPasswordVisible(field.modelKey) ? 'Hide password' : 'Show password'"
+          @click="togglePasswordVisible(field.modelKey)"
+        >
+          <svg
+            v-if="!isPasswordVisible(field.modelKey)"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            class="size-5"
+            aria-hidden="true"
+          >
+            <path
+              d="M2.2 12C4.3 7.6 7.9 5 12 5s7.7 2.6 9.8 7c-2.1 4.4-5.7 7-9.8 7s-7.7-2.6-9.8-7Z"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M12 16.3A4.3 4.3 0 1 0 12 7.7a4.3 4.3 0 0 0 0 8.6Z"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linejoin="round"
+            />
+          </svg>
+          <svg
+            v-else
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            class="size-5"
+            aria-hidden="true"
+          >
+            <path
+              d="M4 4l16 16"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+            <path
+              d="M2.2 12C4.3 7.6 7.9 5 12 5c2.1 0 4.1.7 5.8 2"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M9.1 9.1A4.3 4.3 0 0 0 12 16.3c.8 0 1.6-.2 2.2-.6"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M6.2 6.2C4.5 7.5 3.1 9.4 2.2 12c2.1 4.4 5.7 7 9.8 7 1.7 0 3.3-.4 4.8-1.2"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </button>
+        <p
+          v-if="field.type === 'email' && formValues.email && !isValidEmail(String(formValues.email))"
+          class="mt-1 text-red-500 text-sm"
+          role="alert"
+        >
+          Please enter a valid email address.
+        </p>
 
         <div
           v-else-if="field.label === 'Location'"
@@ -313,6 +383,23 @@
       </div>
     </div>
 
+    <div
+      v-if="currentStep === 2"
+      class="lg:col-span-2"
+    >
+      <label class="mb-1.5 flex items-center justify-between gap-3 body2 text-gray-900">
+        <span>About me (Maximum 150 characters)</span>
+        <span class="text-gray-500">{{ (formValues.bio || '').length }}/150</span>
+      </label>
+      <textarea
+        v-model="formValues.bio"
+        rows="4"
+        class="w-full rounded-lg border border-gray-300 bg-gray-100 px-3 py-2 body2 outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-300 lg:bg-white"
+        placeholder="I know nothing..but you"
+        @input="handleBioInput"
+      />
+    </div>
+
     <img
       :src="ellipse4Icon"
       alt=""
@@ -324,8 +411,10 @@
 
 <script setup>
 import CalendarPicker from "@/components/ui/CalendarPicker.vue"
+import { isValidEmail } from "@/views/register/registerValidation"
+import { ref } from "vue"
 
-defineProps({
+const props = defineProps({
   fields: { type: Array, required: true },
   formValues: { type: Object, required: true },
   registerError: { type: String, required: true },
@@ -356,4 +445,28 @@ defineProps({
   toggleInterestTag: { type: Function, required: true },
   removeInterestTag: { type: Function, required: true },
 })
+
+const emit = defineEmits(["update:registerError"])
+
+const passwordVisibleKeys = ref(new Set())
+
+function isPasswordVisible(modelKey) {
+  return passwordVisibleKeys.value.has(String(modelKey))
+}
+
+function togglePasswordVisible(modelKey) {
+  const key = String(modelKey)
+  const next = new Set(passwordVisibleKeys.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  passwordVisibleKeys.value = next
+}
+
+function handleBioInput() {
+  const max = 150
+  const v = String(props.formValues.bio || "")
+  if (v.length <= max) return
+  props.formValues.bio = v.slice(0, max)
+  // message will be shown when trying to go next/submit
+}
 </script>
