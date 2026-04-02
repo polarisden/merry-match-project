@@ -63,6 +63,7 @@ const {
   photoSlots,
   triggerPhotoPicker,
   handleSelectedPhotos,
+  removePhotoAt,
   readFileAsDataURL,
   cleanupPhotoUrls,
 } = useRegisterPhotos(totalPhotoSlots)
@@ -223,6 +224,7 @@ function goBack() {
         :trigger-photo-picker="triggerPhotoPicker"
         :handle-selected-photos="handleSelectedPhotos"
         :set-photo-input-ref="setPhotoInputRef"
+        :remove-photo-at="removePhotoAt"
       />
 
       <RegisterStep1Step2Form
