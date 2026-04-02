@@ -25,9 +25,9 @@
       />
     </div>
 
-    <div class="mt-5 lg:mt-0 w-full min-w-0 lg:flex-1 lg:max-w-full flex justify-stretch lg:justify-end">
+    <div class="mt-5 lg:mt-0 w-full min-w-0 lg:flex-1 lg:max-w-full flex justify-stretch lg:justify-start">
       <div
-        class="flex w-full min-w-0 max-w-full items-stretch gap-2 lg:gap-3 lg:justify-end lg:flex-nowrap overflow-x-auto lg:overflow-visible pb-0.5 lg:pb-0 [-webkit-overflow-scrolling:touch]"
+        class="flex w-[calc(100%+2rem)] -mx-4 min-w-0 items-stretch gap-2 lg:gap-3 lg:w-[calc(100%+5rem)] lg:-mx-10 lg:justify-start lg:flex-nowrap overflow-x-auto lg:overflow-visible pb-0.5 lg:pb-0 px-[10px] [-webkit-overflow-scrolling:touch]"
         role="list"
         aria-label="Registration steps"
       >
@@ -38,7 +38,7 @@
           <div
             v-if="currentStep === index + 1"
             role="listitem"
-            class="flex min-w-0 shrink-0 items-center gap-2.5 rounded-xl border border-purple-500 bg-white px-3 py-2 lg:h-[80px] lg:flex-none lg:w-auto lg:py-0"
+            class="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-purple-500 bg-white px-3 py-2 lg:h-[80px] lg:flex-1 lg:py-0"
           >
             <div class="shrink-0 w-10 h-10 rounded-lg bg-gray-200 grid place-items-center">
               <span class="register-step-number text-[15px] font-extrabold leading-none text-purple-500 tabular-nums">

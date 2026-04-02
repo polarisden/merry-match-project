@@ -37,6 +37,25 @@ export function useRegisterPhotos(totalPhotoSlots = 5) {
     input.value = ""
   }
 
+  function removePhotoAt(slotIndex) {
+    const removed = selectedPhotos.value[slotIndex]
+    if (!removed) return
+
+    // Revoke the object URL immediately to avoid memory leaks.
+    if (removed.previewUrl) {
+      try {
+        URL.revokeObjectURL(removed.previewUrl)
+      } catch {
+        // ignore
+      }
+      photoObjectUrlsToRevoke.value = photoObjectUrlsToRevoke.value.filter(
+        (url) => url !== removed.previewUrl,
+      )
+    }
+
+    selectedPhotos.value.splice(slotIndex, 1)
+  }
+
   function readFileAsDataURL(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
@@ -58,6 +77,7 @@ export function useRegisterPhotos(totalPhotoSlots = 5) {
     photoSlots,
     triggerPhotoPicker,
     handleSelectedPhotos,
+    removePhotoAt,
     readFileAsDataURL,
     cleanupPhotoUrls,
   }
