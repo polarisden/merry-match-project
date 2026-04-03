@@ -76,10 +76,17 @@ const {
   interestTags,
   selectedInterestTags,
   interestOptions,
-  toggleInterestTag,
+  toggleInterestTag: toggleInterestTagRaw,
   removeInterestTag,
   fetchInterests,
 } = useRegisterInterests()
+function toggleInterestTag(tag) {
+  if (!selectedInterestTags.value.includes(tag) && selectedInterestTags.value.length >= 10) {
+    registerError.value = "ครบ 10 อันแล้ว"
+    return
+  }
+  toggleInterestTagRaw(tag)
+}
 
 const canGoBack = computed(() => currentStep.value > 1)
 const nextLabel = computed(() => (currentStep.value === 3 ? "Confirm" : "Next step"))

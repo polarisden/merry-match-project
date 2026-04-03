@@ -18,7 +18,7 @@ const emit = defineEmits(["update:modelValue"])
 const isOpen = ref(false)
 const rootEl = ref(null)
 const today = new Date()
-const minYear = 1900
+const minYear = computed(() => today.getFullYear() - 100)
 
 const maxBirthDate = computed(() => {
   const date = new Date(today)
@@ -51,10 +51,8 @@ const monthNames = [
 
 const yearOptions = computed(() => {
   const maxYear = maxBirthDate.value.getFullYear()
-  return Array.from(
-    { length: maxYear - minYear + 1 },
-    (_, index) => maxYear - index,
-  )
+  const min = minYear.value
+  return Array.from({ length: maxYear - min + 1 }, (_, index) => maxYear - index)
 })
 
 const selectedDate = computed(() => {
@@ -101,19 +99,20 @@ const calendarDays = computed(() => {
 })
 
 const displayValue = computed(() => {
-  if (!selectedDate.value) return props.placeholder
+  const defaultPlaceholder = maxBirthDate.value.toLocaleDateString("en-GB")
+  if (!selectedDate.value) return defaultPlaceholder
   return selectedDate.value.toLocaleDateString("en-GB")
 })
 
 const canGoNextMonth = computed(() => {
-  const maxYear = maxBirthDate.value.getFullYear()
-  const maxMonth = maxBirthDate.value.getMonth()
-  if (currentYear.value < maxYear) return true
-  return currentMonth.value < maxMonth
+  const thisYear = today.getFullYear()
+  const thisMonth = today.getMonth()
+  if (currentYear.value < thisYear) return true
+  return currentMonth.value < thisMonth
 })
 
 const canGoPrevMonth = computed(() => {
-  return !(currentYear.value === minYear && currentMonth.value === 0)
+  return !(currentYear.value === minYear.value && currentMonth.value === 0)
 })
 
 function goPrevMonth() {
