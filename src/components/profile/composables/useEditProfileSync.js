@@ -1,3 +1,4 @@
+import { strField } from "@/views/register/registerValidation"
 import { validateEditProfile } from "../validation/editProfileValidation"
 
 export function useEditProfileSync({
@@ -5,6 +6,8 @@ export function useEditProfileSync({
   formValues,
   locationOptions,
   cityOptions,
+  selectedLocationLabel,
+  selectedCityLabel,
   bioRef,
   selectedInterestTags,
   interestOptions,
@@ -100,6 +103,12 @@ export function useEditProfileSync({
         .filter((item) => selectedInterestTags.value.includes(item.name) && item.id)
         .map((item) => item.id)
 
+      // Match RegisterPage: persist human-readable country/city names in DB (not ISO codes).
+      const locationCountryName =
+        strField(selectedLocationLabel?.value ?? "") || strField(formValues.location ?? "") || null
+      const locationCityName =
+        strField(selectedCityLabel?.value ?? "") || strField(formValues.city ?? "") || null
+
       const payload = {
         username: formValues.username,
         name: formValues.name,
@@ -108,8 +117,8 @@ export function useEditProfileSync({
         sexualPreference: formValues.sexualPreference || null,
         racialPreference: formValues.racialPreference || null,
         meetingInterest: formValues.meetingInterest || null,
-        location: formValues.location || null,
-        city: formValues.city || null,
+        location: locationCountryName,
+        city: locationCityName,
         bio: bioRef.value || null,
         interestIds: selectedInterestIds,
       }

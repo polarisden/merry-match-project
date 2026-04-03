@@ -402,6 +402,8 @@ const { loadProfile, submitUpdate: submitUpdateInternal } = useEditProfileSync({
   formValues,
   locationOptions,
   cityOptions,
+  selectedLocationLabel,
+  selectedCityLabel,
   bioRef: bio,
   selectedInterestTags,
   interestOptions,

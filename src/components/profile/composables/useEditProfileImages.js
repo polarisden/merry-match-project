@@ -1,4 +1,5 @@
 import { computed, ref } from "vue"
+import { sortProfileImagesForDisplay } from "@/components/profile/utils/profileImageOrder"
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
@@ -115,14 +116,7 @@ export function useEditProfileImages({
   function setSlotsFromApiImages(images) {
     if (!Array.isArray(images) || images.length === 0) return
 
-    const sorted = [...images].sort((a, b) => {
-      if (a?.isPrimary && !b?.isPrimary) return -1
-      if (!a?.isPrimary && b?.isPrimary) return 1
-
-      const at = a?.createdAt ? Date.parse(a.createdAt) : 0
-      const bt = b?.createdAt ? Date.parse(b.createdAt) : 0
-      return at - bt
-    })
+    const sorted = sortProfileImagesForDisplay(images)
 
     const items = sorted
       .map((x) => ({ id: x?.id, url: x?.imageUrl }))
