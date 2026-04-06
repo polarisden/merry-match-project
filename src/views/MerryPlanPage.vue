@@ -36,7 +36,7 @@
           v-for="merryPlan in merryPlans"
           :key="merryPlan.id"
           :merry-plan="merryPlan"
-          :is-current="currentPlanId === merryPlan.id"
+          :is-current="currentPlanId !== null && String(merryPlan.id) === currentPlanId"
           @select="handleSelectPlan"
         />
       </template>
@@ -73,12 +73,14 @@ const { plans: merryPlans, loading, error, fetchPlans, goToPaymentWithPlan } =
 const membership = ref(null);
 const membershipError = ref("");
 const currentPlanId = computed(() => {
-  const id = membership.value?.planId;
-  return typeof id === "number" ? id : null;
+  const m = membership.value;
+  const id = m?.planId ?? m?.plan?.id;
+  if (id == null || id === "") return null;
+  return String(id);
 });
 
 onMounted(async () => {
-  await Promise.all([
+  await Promise.all([ 
     fetchPlans(),
     (async () => {
       try {
@@ -94,91 +96,7 @@ onMounted(async () => {
 });
 </script>
 <!-- Section: Payment method -
-รองรับ subscription
-รองรับ retry payment
-กัน user แฮกสถานะ
 
-สำคัญห้ามลืม
-
-Frontend:
-  POST /orders
-  { plan_id }
-
-Backend:
-  1. get user_id จาก auth
-  2. validate plan
-  3. create order:
-     - user_id
-     - plan_id
-     - status = pending
-     - amount (copy จาก plan)
-
-  4. return order_id
-
-  validate ว่า plan มีจริง
-check user มี subscription อยู่ไหม
-block ซื้อซ้ำ (ถ้ายัง active)
-generate order_id แบบ unique (UUID)
-
-Flow: Upgrade Subscription (ทันที)
-🧾 Step-by-step
-1. user กด upgrade (Basic → Premium)
-
-2. POST /orders
-   → type = upgrade
-   → status = pending
-
-3. backend:
-   - คำนวณเงินเพิ่ม (pro-rate)
-
-4. POST /payments
-   → charge เงินส่วนต่าง
-
-5. Omise webhook → success
-
-6. backend:
-   - update subscription → premium
-   - update next_billing_date (คงเดิม)
-
-   เงินที่ต้องจ่าย =
-(ราคาของใหม่ - ราคาของเก่า)
-× (จำนวนวันที่เหลือ / จำนวนวันทั้งหมด)
-
-
-🧠 ตัวอย่าง
-Basic = 100 บาท / เดือน
-Premium = 300 บาท / เดือน
-ใช้ไปแล้ว 15 วัน (เหลือ 15 วัน)
-ส่วนต่าง = 200 บาท
-ต้องจ่าย = 200 × (15/30) = 100 บาท
-
-โครงสร้าง order (ตอน upgrade)
-{
-  "user_id": 1,
-  "old_plan_id": 1,
-  "new_plan_id": 2,
-  "type": "upgrade",
-  "amount": 10000,
-  "status": "pending"
-}
-
-หลังจากจ่ายสำเร็จ
-subscription:
-  plan_id = premium
-  next_billing_date = เดิม (ไม่ reset)
-
-🔐 Security (กันแฮก)
-✅ ต้องใช้ webhook จาก Omise เท่านั้น
-if webhook.success:
-   update subscription
-
-   รองรับ Retry Payment (ตอน upgrade)
-order = pending
-
-attempt 1 → fail
-attempt 2 → success
-
-→ ค่อย upgrade
 
 plan_id = แพ็กเกจที่ใช้อยู่ตอนนี้
 pending_plan_id = แพ็กเกจที่ "กำลังจะเปลี่ยน"

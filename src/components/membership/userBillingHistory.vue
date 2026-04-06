@@ -13,9 +13,8 @@
           class="inline-block h-[22px] w-[220px] rounded bg-gray-200 animate-pulse"
         ></span>
       </p>
-      <!--mobile nextbilling -->
       <p v-else class="body1 text-gray-700 pt-[8px] lg:hidden">
-        Next billing : {{ billing.nextBillingDate }}
+        Next billing : {{ displayNextBilling }}
       </p>
     </div>
     <div
@@ -29,38 +28,44 @@
           class="inline-block h-[22px] w-[220px] rounded bg-gray-200 animate-pulse"
         ></span>
       </p>
-      <!--desktop nextbilling -->
       <p
         v-else
         class="hidden body1 text-gray-700 lg:flex py-[8px] border-b border-gray-300"
       >
-        Next billing : {{ billing.nextBillingDate }}
+        Next billing : {{ displayNextBilling }}
       </p>
       <div class="lg:mt-[8px] lg:mb-[16px] max-h-[270px] lg:max-h-[380px] overflow-y-auto">
         <UserBillingHistorySkeleton v-if="loading" :row-count="SKELETON_ROW_COUNT" />
+        <p
+          v-else-if="rows.length === 0"
+          class="body2 text-gray-600 p-[16px]"
+        >
+          No billing history yet.
+        </p>
         <table
           v-else
           class="w-full lg:table-fixed lg:border-separate lg:border-spacing-0"
         >
+          
           <tbody>
-            <tr v-for="(row, index) in billing.rows" :key="row.id">
+            <tr v-for="(row, index) in rows" :key="row.id">
               <td
                 class="body2 text-gray-700 p-[16px] lg:w-[104px] lg:whitespace-nowrap"
                 :class="index % 2 === 1 ? 'bg-gray-100 lg:rounded-l-lg' : ''"
               >
-                {{ row.date }}
+                {{ formatBilledAt(row.billedAt) }}
               </td>
               <td
                 class="body2 text-gray-700 p-[16px] lg:text-left lg:max-w-[609px]"
                 :class="index % 2 === 1 ? 'bg-gray-100' : ''"
               >
-                {{ row.packageName }}
+                {{ row.planName }}
               </td>
               <td
                 class="body2 text-gray-800 p-[16px] text-right"
                 :class="index % 2 === 1 ? 'bg-gray-100 lg:rounded-r-lg' : ''"
               >
-                THB {{ formatAmount(row.amount) }}
+              THB {{ formatAmountThb(row.amountSatang) }}
               </td>
             </tr>
           </tbody>
@@ -72,7 +77,7 @@
       >
         <BaseButtonGhost
           class="w-fit [--btn-px:0px] [--btn-py:0px]"
-          :disabled="loadingPDF"
+          :disabled="loadingPDF || loading"
           @click="handleRequestPdf"
         >
           Request PDF
@@ -82,7 +87,7 @@
     <div class="lg:hidden flex flex-row justify-start py-[4px] px-[16px]">
       <BaseButtonGhost
         class="w-fit [--btn-px:0px] [--btn-py:0px]"
-        :disabled="loadingPDF"
+        :disabled="loadingPDF || loading"
         @click="handleRequestPdf"
       >
         Request PDF
@@ -92,7 +97,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import BaseButtonGhost from "../base/BaseButtonGhost.vue";
 import UserBillingHistorySkeleton from "./UserBillingHistorySkeleton.vue";
 import { getBillingHistory } from "../../api/billingHistoryApi";
@@ -100,38 +105,63 @@ import { downloadBillingHistoryPdf } from "../../utils/downloadBillingHistoryPdf
 
 const emit = defineEmits(["requestPdf"]);
 
+const props = defineProps({
+  /** จาก membership (normalize) — ข้อความแสดงวันถัดบิล */
+  nextBillingDate: {
+    type: String,
+    default: "",
+  },
+});
+
 const SKELETON_ROW_COUNT = 5;
 
 const loading = ref(false);
 const error = ref("");
 const loadingPDF = ref(false);
-const billing = ref({
-  nextBillingDate: "",
-  rows: [],
-});
+const rows = ref([]);
 
-const formatAmount = (amount) => Number(amount).toFixed(2);
+const displayNextBilling = computed(() =>
+  props.nextBillingDate?.trim() ? props.nextBillingDate : "—",
+);
+
+/** DD/MM/YYYY */
+function formatBilledAt(iso) {
+  if (iso == null || iso === "") return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+function formatAmountThb(amountSatang) {
+  return (Number(amountSatang ?? 0) / 100).toFixed(2);
+}
 
 onMounted(async () => {
   try {
     loading.value = true;
     error.value = "";
-    billing.value = await getBillingHistory();
+    rows.value = await getBillingHistory();
   } catch (e) {
     error.value = "Failed to load billing history";
+    rows.value = [];
   } finally {
     loading.value = false;
   }
 });
 
-async function handleRequestPdf() {
+function handleRequestPdf() {
   try {
     loadingPDF.value = true;
-    const fullBilling = await getBillingHistory();
-    downloadBillingHistoryPdf(fullBilling);
-    emit("requestPdf", fullBilling);
+    downloadBillingHistoryPdf({
+      nextBillingDate: displayNextBilling.value,
+      rows: rows.value,
+    });
+    emit("requestPdf", { rows: rows.value });
   } catch (e) {
-    error.value = "Failed to load full billing history";
+    error.value = "Failed to generate PDF";
   } finally {
     loadingPDF.value = false;
   }

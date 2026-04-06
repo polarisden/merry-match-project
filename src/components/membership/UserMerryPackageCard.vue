@@ -12,13 +12,13 @@
           >
             <img
               :src="merryPackage.icon"
-              :alt="`${merryPackage.packageName} package icon`"
+              :alt="`${displayName} package icon`"
               class="h-[25.2px] w-[28.8px] object-contain"
             />
           </div>
 
           <div class="flex flex-col gap-[8px] lg:min-w-[225px]">
-            <h3 class="headline3 text-white">{{ merryPackage.packageName }}</h3>
+            <h3 class="headline3 text-white">{{ displayName }}</h3>
             <p
               class="flex flex-row justify-start items-baseline gap-[6px] text-purple-100"
             >
@@ -32,8 +32,8 @@
           class="flex flex-col gap-[8px] list-none pb-[24px] lg:pb-0 border-b lg:border-0 border-purple-300"
         >
           <li
-            v-for="(detail, detailIndex) in merryPackage.packageDetail"
-            :key="`${merryPackage.id}-detail-${detailIndex}`"
+            v-for="(detail, detailIndex) in displayDetails"
+            :key="`${rowKey}-detail-${detailIndex}`"
             class="body2 text-gray-800 flex items-center gap-[10px]"
           >
             <SuccessIcon class="w-[18px] h-[18px] text-purple-300 shrink-0" />
@@ -42,7 +42,7 @@
         </ul>
       </div>
       <div class="hidden lg:block">
-        <span class="py-[4px] px-[16px] bg-beige-200 rounded-full text-beige-600 body3">{{merryPackage.status}}</span>
+        <span class="py-[4px] px-[16px] bg-beige-200 rounded-full text-beige-600 body3">{{ displayStatus }}</span>
       </div>
     </div>
 
@@ -50,13 +50,11 @@
       <div>
         <p class="flex flex-row justify-between">
           <span class="body2 text-purple-200">Start Membership</span>
-          <span class="body2 text-white lg:pl-[40px]">{{ merryPackage.startDate }}</span>
+          <span class="body2 text-white lg:pl-[40px]">{{ displayStartDate }}</span>
         </p>
         <p class="flex flex-row justify-between">
           <span class="body2 text-purple-200">Next billing</span>
-          <span class="body2 text-white lg:pl-[40px]">{{
-            merryPackage.nextBillingDate
-          }}</span>
+          <span class="body2 text-white lg:pl-[40px]">{{ displayNextBilling }}</span>
         </p>
       </div>
 
@@ -86,7 +84,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import SuccessIcon from "@/assets/icons/success.svg";
 import BaseButtonGhost from "../base/BaseButtonGhost.vue";
 import ConfirmModal from "../modals/ConfirmModal.vue";
@@ -94,7 +92,7 @@ import ConfirmModal from "../modals/ConfirmModal.vue";
 
 const emit = defineEmits(["cancelPackage"]);
 
-defineProps({
+const props = defineProps({
   merryPackage: {
     type: Object,
     required: true,
@@ -105,7 +103,29 @@ defineProps({
   },
 });
 
-const formatPrice = (satang) => Number(satang/100).toFixed(2);
+/** ข้อมูลจาก normalizeMembership (membershipApi) */
+const displayName = computed(() => props.merryPackage.packageName ?? "");
+
+const displayPriceSatang = computed(() => props.merryPackage.price ?? 0);
+
+const displayDetails = computed(() => {
+  const raw = props.merryPackage.packageDetail;
+  return Array.isArray(raw) ? raw : [];
+});
+
+const displayStatus = computed(() => props.merryPackage.status ?? "");
+
+const displayStartDate = computed(() => props.merryPackage.startDate ?? "");
+
+const displayNextBilling = computed(
+  () => props.merryPackage.nextBillingDate ?? "",
+);
+
+const rowKey = computed(
+  () => props.merryPackage.id ?? props.merryPackage.planId ?? "package",
+);
+
+const formatPrice = (satang) => Number(satang / 100).toFixed(2);
 
 const openCancelModal = ref(false);
 

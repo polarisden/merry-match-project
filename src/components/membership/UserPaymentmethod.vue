@@ -2,29 +2,39 @@
   <article class="flex flex-col gap-[24px]">
     <p class="headline4 text-gray-900">Payment method</p>
     <div
-      class="flex flex-col px-[32px] pt-[32px] pb-[24px]  gap-[16px] border border-gray-400 rounded-[24px] bg-white"
+      class="flex flex-col px-[32px] pt-[32px] pb-[24px] gap-[16px] border border-gray-400 rounded-[24px] bg-white"
     >
       <div class="flex flex-row gap-[16px] border-b border-gray-300 pb-[24px]">
         <div
           class="w-[66px] h-[66px] bg-gray-100 rounded-[16px] flex justify-center items-center"
         >
-          <CreditCard class="w-[32px] h-[32px] text-red-200" />
+          <CreditCard class="w-[32px] h-[32px] text-red-200" aria-hidden="true" />
         </div>
         <div>
           <p v-if="error" class="body2 text-red-500">{{ error }}</p>
           <template v-else>
-            <p v-if="loading" class="headline4 text-purple-600">
-              <span class="inline-block h-[24px] w-[180px] rounded bg-gray-200 animate-pulse"></span>
-            </p>
-            <p v-else class="headline4 text-purple-600">
-              {{ paymentMethod.brand }} ending *{{ paymentMethod.last4 }}
-            </p>
-
-            <p v-if="loading" class="body2 text-gray-700 mt-[4px]">
-              <span class="inline-block h-[18px] w-[140px] rounded bg-gray-200 animate-pulse"></span>
-            </p>
-            <p v-else class="body2 text-gray-700">
-              Expire {{ paymentMethod.expMonth }}/{{ paymentMethod.expYear }}
+            <template v-if="loading">
+              <p class="headline4 text-purple-600">
+                <span
+                  class="inline-block h-[24px] w-[180px] rounded bg-gray-200 animate-pulse"
+                ></span>
+              </p>
+              <p class="body2 text-gray-700 mt-[4px]">
+                <span
+                  class="inline-block h-[18px] w-[140px] rounded bg-gray-200 animate-pulse"
+                ></span>
+              </p>
+            </template>
+            <template v-else-if="hasCard">
+              <p class="headline4 text-purple-600">
+                {{ paymentCard.brand }} ending *{{ paymentCard.last4 }}
+              </p>
+              <p class="body2 text-gray-700 mt-[4px]">
+                Expires {{ expMonthDisplay }}/{{ paymentCard.expYear }}
+              </p>
+            </template>
+            <p v-else class="body2 text-gray-600">
+              No payment card on file for this membership.
             </p>
           </template>
         </div>
@@ -43,29 +53,40 @@
 </template>
 
 <script setup>
+import { computed } from "vue";
 import CreditCard from "@/assets/icons/credit_card.svg";
 import BaseButtonGhost from "../base/BaseButtonGhost.vue";
-import { onMounted, ref } from "vue";
-import { getPaymentMethod } from "../../api/paymentMethodApi";
 
-const loading = ref(false);
-const error = ref("");
-const paymentMethod = ref({
-  brand: "",
-  last4: "",
-  expMonth: "",
-  expYear: "",
+const props = defineProps({
+  /** จาก normalizeMembership — { brand, last4, expMonth, expYear } */
+  paymentCard: {
+    type: Object,
+    default: null,
+  },
+  loading: {
+    type: Boolean,
+    default: false,
+  },
+  error: {
+    type: String,
+    default: "",
+  },
 });
 
-onMounted(async () => {
-  try {
-    loading.value = true;
-    error.value = "";
-    paymentMethod.value = await getPaymentMethod();
-  } catch (e) {
-    error.value = "Failed to load payment method";
-  } finally {
-    loading.value = false;
-  }
+defineEmits(["handleEditPaymentMethod"]);
+
+const hasCard = computed(() => {
+  const c = props.paymentCard;
+  return (
+    c != null &&
+    typeof c === "object" &&
+    (c.last4 !== "" || c.brand !== "")
+  );
+});
+
+const expMonthDisplay = computed(() => {
+  const m = props.paymentCard?.expMonth;
+  if (m === "" || m == null) return "—";
+  return String(m).padStart(2, "0");
 });
 </script>

@@ -1,71 +1,101 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:8080",
+  // Dev: ใช้ "" ให้ยิง /api/* ไปที่ Vite (5173) แล้ว proxy ไป 8080 — ไม่โดน CORS
+  // Production: ตั้ง VITE_API_BASE_URL=https://api.example.com
+  baseURL: import.meta.env.VITE_API_BASE_URL || "",
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
-/**
- * Switch to real backend: set in .env
- *   VITE_USE_MOCK_API=false
- *   VITE_API_BASE_URL=http://localhost:8080
- */
-const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API !== "false";
+api.interceptors.request.use((config) => {
+  const headers = config.headers ?? {};
+  const token =
+    typeof localStorage !== "undefined" ? localStorage.getItem("token")?.trim() : "";
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  config.headers = headers;
+  return config;
+});
 
-/** ตั้ง true เพื่อทดสอบว่า user ยังไม่มี membership (mock เท่านั้น) */
-const MOCK_NO_MEMBERSHIP =
-  import.meta.env.VITE_MOCK_NO_MEMBERSHIP === "true";
+const DEFAULT_PACKAGE_ICON =
+  "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Heart_coraz%C3%B3n.svg/960px-Heart_coraz%C3%B3n.svg.png";
 
-// TODO: remove mock, use real API when backend ready
-const mockCurrentMembership = {
-  id: 1,
-  planId: 1,
-  planName: "plan1",
-  price: 1000,
-  merryLimit: 70,
-  planDetail: ["merryDetail1.1", "merryDetail1.2"],
-  icon: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Heart_coraz%C3%B3n.svg/960px-Heart_coraz%C3%B3n.svg.png",
-  startDate: "01/04/2022",
-  nextBillingDate: "01/05/2022",
-  status: "active",
-};
+/** DD/MM/YYYY */
+function formatMembershipDate(iso) {
+  if (iso == null || iso === "") return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
 
-function delay(ms = 500) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function formatStatusLabel(status) {
+  if (status == null || status === "") return "";
+  const s = String(status).toLowerCase();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+function descriptionsToDetailLines(descriptions) {
+  if (!Array.isArray(descriptions)) return [];
+  return [...descriptions]
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .map((d) => (typeof d === "string" ? d : d?.description))
+    .filter(Boolean);
 }
 
 /**
- * คืน null เมื่อยังไม่มี subscription / ไม่มีแพ็กปัจจุบัน
- * (backend อาจส่ง null, {}, หรือ planId เป็น null)
+ * คืน null เมื่อยังไม่มี subscription / payload ไม่ครบ
+ * SubscriptionDetailDto { plan: { name, priceSatang, descriptions } }
+ * คืน object สำหรับ UI: แพ็กเกจ (ชื่อ ราคา รายการ), วันที่, icon, paymentCard (brand, last4, วันหมดอายุ)
  */
 export function normalizeMembership(data) {
   if (data == null) return null;
-  const id = data.planId;
-  if (id == null || id === "") return null;
-  return data;
+  const planId = data.planId ?? data.plan?.id;
+  if (planId == null || planId === "") return null;
+
+  const plan = data.plan;
+  if (!plan || typeof plan.name !== "string") return null;
+
+  const rawCard = data.paymentCard;
+  const paymentCard =
+    rawCard && typeof rawCard === "object"
+      ? {
+          brand: String(rawCard.brand ?? ""),
+          last4: String(rawCard.lastDigits ?? ""),
+          expMonth: rawCard.expirationMonth ?? "",
+          expYear: rawCard.expirationYear ?? "",
+        }
+      : null;
+
+  return {
+    ...data,
+    planId: String(planId),
+    id: data.id,
+    packageName: plan.name,
+    price: plan.priceSatang ?? 0,
+    packageDetail: descriptionsToDetailLines(plan.descriptions),
+    icon: DEFAULT_PACKAGE_ICON,
+    status: formatStatusLabel(data.status),
+    startDate: formatMembershipDate(data.currentPeriodStart),
+    nextBillingDate: formatMembershipDate(data.nextBillingDate),
+    paymentCard,
+  };
 }
 
-export async function getCurrentMembershipMock() {
-  await delay(500);
-  if (MOCK_NO_MEMBERSHIP) return null;
-  return mockCurrentMembership;
-}
-
-export async function getCurrentMembershipFromApi() {
+/**
+ * GET /api/membership/current — 404 = ยังไม่มี membership
+ */
+export async function getCurrentMembership() {
   try {
     const { data } = await api.get("/api/membership/current");
     return normalizeMembership(data);
   } catch (e) {
-    // ยังไม่เคยสมัคร / ไม่มีข้อมูล membership
     if (e?.response?.status === 404) return null;
     throw e;
   }
 }
-
-export async function getCurrentMembership() {
-  const raw = USE_MOCK_API
-    ? await getCurrentMembershipMock()
-    : await getCurrentMembershipFromApi();
-  return normalizeMembership(raw);
-}
-
-export { USE_MOCK_API };

@@ -35,9 +35,13 @@
       </p>
     </section>
 
-    <UserPaymentmethod />
+    <UserPaymentmethod
+      :loading="loading"
+      :error="error"
+      :payment-card="merryPackage?.paymentCard ?? null"
+    />
   </div>
-  <UserBillingHistory />
+  <UserBillingHistory :next-billing-date="merryPackage?.nextBillingDate ?? ''" />
 
   <div class="h-[345px] w-full border-t">footer</div>
 </template>

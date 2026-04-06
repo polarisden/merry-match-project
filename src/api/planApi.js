@@ -2,47 +2,68 @@ import axios from "axios";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || "",
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
+
+api.interceptors.request.use((config) => {
+  const headers = config.headers ?? {};
+  const token =
+    typeof localStorage !== "undefined" ? localStorage.getItem("token")?.trim() : "";
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  config.headers = headers;
+  return config;
 });
 
 /**
- * Switch to real backend: set in .env
- *   VITE_USE_MOCK_API=false
- *   VITE_API_BASE_URL=https://your-api.example.com
- * While true (default), mock implementations run (localStorage + in-memory orders).
+ * Mock is ON unless VITE_USE_MOCK_API is exactly the string "false".
+ * If unset, mock runs — Omise Dashboard will show nothing (no server-side charge).
+ *
+ * Real payment: .env.local → VITE_USE_MOCK_API=false
+ * Optional: leave VITE_API_BASE_URL empty and use Vite proxy (/api → localhost:8080).
  */
-const USE_MOCK_API = true;
+const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API !== "false";
 
-// --- Backend response shapes (for TypeScript / JSDoc reference) -------------------
+// --- Backend response shapes (JSDoc) -------------------------------------------
+
 /**
- * @typedef {Object} CreateOrderResponse
- * @property {string} orderId
- * @property {string} paymentUrl   // Omise redirect URL from backend
+ * @typedef {Object} OmiseConfigResponse
+ * @property {string} publicKey
+ */
+
+/**
+ * @typedef {Object} SubscriptionCheckoutResponse
+ * @property {string|null} subscriptionId
+ * @property {string} chargeId
+ * @property {'paid'|'pending'|string} status
+ * @property {string|null} authorizeUri
+ * @property {string|null} [omiseCustomerId]
+ * @property {string|null} [omiseCardId]
  */
 
 /**
  * @typedef {Object} OrderPlanSnapshot
  * @property {number|string} id
- * @property {string} planName
- * @property {number} price
- * @property {number} merryLimit
- * @property {string[]} planDetail
- * @property {string} icon
- * @property {string} [startDate]       // DD/MM/YYYY from backend
- * @property {string} [nextBillingDate] // DD/MM/YYYY from backend
+ * @property {string} [planName]
+ * @property {string} [name]
+ * @property {number} [priceSatang]
+ * @property {string[]} [planDetail]
+ * @property {string} [icon_url]
+ * @property {string} [startDate]
+ * @property {string} [nextBillingDate]
  */
 
 /**
- * @typedef {Object} Order
+ * @typedef {Object} LegacyOrder
  * @property {string} id
  * @property {number|string} planId
  * @property {string} status
  * @property {string} createdAt
- * @property {string} [paidAt]
- * @property {string} [paymentStatus]
  * @property {OrderPlanSnapshot} plan
  */
-
-// TODO: remove mock block below when backend is stable in all environments
 
 const DEFAULT_PACKAGE_ICON_URL =
   "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Heart_coraz%C3%B3n.svg/960px-Heart_coraz%C3%B3n.svg.png";
@@ -60,11 +81,6 @@ function normalizePlanDetail(plan) {
     .filter(Boolean);
 }
 
-/**
- * Normalize backend/mock plan into a frontend-friendly shape.
- * Backend (2026): { id(uuid), name, priceSatang, sortOrder, descriptions[] }
- * Mock (legacy): { id, name, priceSatang, sort_order, planDetail, icon_url }
- */
 export function normalizePlan(plan) {
   if (!plan || typeof plan !== "object") return null;
 
@@ -84,6 +100,43 @@ export function normalizePlans(plans) {
   return plans.map(normalizePlan).filter(Boolean);
 }
 
+/** ISO date string → DD/MM/YYYY for card display */
+function isoToDdMmYyyy(value) {
+  if (value == null || value === "") return null;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-GB");
+}
+
+/**
+ * Map subscription / mock payload to UI plan card shape.
+ * Supports SubscriptionDetailDto (currentPeriodStart, nextBillingDate, plan) and mock shapes.
+ */
+export function subscriptionToSuccessPlan(sub) {
+  if (!sub || typeof sub !== "object") return null;
+  const raw = sub.plan ?? sub.currentPlan ?? sub.planSnapshot ?? sub;
+  const plan = normalizePlan(raw);
+  if (!plan) return null;
+
+  const startDate =
+    sub.startDate ||
+    isoToDdMmYyyy(sub.currentPeriodStart) ||
+    plan.startDate ||
+    undefined;
+  const nextBillingDate =
+    isoToDdMmYyyy(sub.nextBillingDate) ||
+    isoToDdMmYyyy(sub.currentPeriodEnd) ||
+    plan.nextBillingDate ||
+    undefined;
+
+  return {
+    ...plan,
+    planDetail: plan.planDetail ?? [],
+    ...(startDate ? { startDate } : {}),
+    ...(nextBillingDate ? { nextBillingDate } : {}),
+  };
+}
+
 // --- Mock data & helpers ------------------------------------------------------
 
 const MerryPlans = [
@@ -93,7 +146,7 @@ const MerryPlans = [
     priceSatang: 1000,
     swipeLimit: 70,
     canSeeLikers: false,
-    sort_order:2,
+    sort_order: 2,
     planDetail: ["merryDetail1.1", "merryDetail1.2", "merryDetail1.3"],
     icon_url: DEFAULT_PACKAGE_ICON_URL,
   },
@@ -103,7 +156,7 @@ const MerryPlans = [
     priceSatang: 2000,
     swipeLimit: 150,
     canSeeLikers: false,
-    sort_order:1,
+    sort_order: 1,
     planDetail: ["merryDetail2.1", "merryDetail2.2"],
     icon_url: DEFAULT_PACKAGE_ICON_URL,
   },
@@ -113,7 +166,7 @@ const MerryPlans = [
     priceSatang: 3000,
     swipeLimit: 300,
     canSeeLikers: false,
-    sort_order:3,
+    sort_order: 3,
     planDetail: ["merryDetail3.1", "merryDetail3.2"],
     icon_url: DEFAULT_PACKAGE_ICON_URL,
   },
@@ -123,7 +176,7 @@ const MerryPlans = [
     priceSatang: 40000,
     swipeLimit: 600,
     canSeeLikers: false,
-    sort_order:4,
+    sort_order: 4,
     planDetail: ["merryDetail4.1", "merryDetail4.2"],
     icon_url: DEFAULT_PACKAGE_ICON_URL,
   },
@@ -131,6 +184,11 @@ const MerryPlans = [
 
 const ORDER_STORAGE_KEY = "mockOrders";
 const orders = new Map();
+
+/** @type {Map<string, object>} */
+const mockSubscriptionsById = new Map();
+/** @type {Map<string, object>} */
+const mockSubscriptionsByChargeId = new Map();
 
 function loadOrdersFromStorage() {
   try {
@@ -144,7 +202,7 @@ function loadOrdersFromStorage() {
       }
     });
   } catch {
-    // ignore invalid localStorage data in mock mode
+    // ignore
   }
 }
 
@@ -152,7 +210,7 @@ function persistOrdersToStorage() {
   try {
     localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify([...orders.values()]));
   } catch {
-    // ignore localStorage write errors in mock mode
+    // ignore
   }
 }
 
@@ -194,7 +252,19 @@ export async function getPlanByIdMock(id) {
   return plan;
 }
 
-export async function createOrderMock(planId) {
+export async function getOmiseConfigMock() {
+  await delay(100);
+  return {
+    publicKey: import.meta.env.VITE_OMISE_PUBLIC_KEY || "",
+  };
+}
+
+/**
+ * @param {string|number} planId
+ * @param {{ omiseToken?: string }} payload
+ * @returns {Promise<SubscriptionCheckoutResponse>}
+ */
+export async function subscriptionCheckoutMock(planId, payload = {}) {
   await delay(500);
   const plan = MerryPlans.find((p) => String(p.id) === String(planId));
 
@@ -203,20 +273,36 @@ export async function createOrderMock(planId) {
   const paidAt = new Date();
   const startDate = formatDateDDMMYYYY(paidAt);
   const nextBillingDate = formatDateDDMMYYYY(addOneMonthClamped(paidAt));
-  const user = {
-    id: "dsjhio123456 "
-  }
+
+  const subscriptionId =
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `sub_mock_${Date.now()}`;
+  const chargeId = `chrg_test_${Date.now()}`;
+
+  const planSnapshot = {
+    ...plan,
+    startDate,
+    nextBillingDate,
+  };
+
+  const record = {
+    id: subscriptionId,
+    chargeId,
+    status: "paid",
+    plan: planSnapshot,
+  };
+
+  mockSubscriptionsById.set(subscriptionId, record);
+  mockSubscriptionsByChargeId.set(chargeId, record);
+
   const orderId = String(Date.now());
   const order = {
     id: orderId,
     planId: plan.id,
     paymentStatus: "paid",
     paidAt: paidAt.toISOString(),
-    plan: {
-      ...plan,
-      startDate,
-      nextBillingDate,
-    },
+    plan: planSnapshot,
     status: "paid",
     createdAt: paidAt.toISOString(),
   };
@@ -225,8 +311,12 @@ export async function createOrderMock(planId) {
   persistOrdersToStorage();
 
   return {
-    orderId,
-    paymentUrl: `/merry-plan/payment-success?orderId=${encodeURIComponent(orderId)}`,
+    subscriptionId,
+    chargeId,
+    status: "paid",
+    authorizeUri: null,
+    omiseCustomerId: null,
+    omiseCardId: null,
   };
 }
 
@@ -238,7 +328,21 @@ export async function getOrderMock(orderId) {
   return order;
 }
 
-// --- Real API (same signatures; wire when backend is ready) -------------------
+export async function getSubscriptionMock(subscriptionId) {
+  await delay(300);
+  const sub = mockSubscriptionsById.get(String(subscriptionId));
+  if (!sub) throw new Error("Subscription not found");
+  return sub;
+}
+
+export async function getSubscriptionByChargeMock(chargeId) {
+  await delay(300);
+  const sub = mockSubscriptionsByChargeId.get(String(chargeId));
+  if (!sub) throw new Error("Subscription not found for charge");
+  return sub;
+}
+
+// --- Real API -----------------------------------------------------------------
 
 export async function getPlansFromApi() {
   const { data } = await api.get("/api/plans");
@@ -251,31 +355,39 @@ export async function getPlanByIdFromApi(id) {
 }
 
 /**
- * SECURITY: send only planId — never price/amount from frontend.
- * @param {string|number} planId
- * @returns {Promise<CreateOrderResponse>}
+ * Optional: public key from backend when VITE_OMISE_PUBLIC_KEY is empty.
+ * @returns {Promise<OmiseConfigResponse>}
  */
-export async function createOrderFromApi(planId) {
-  const { data } = await api.post("/api/orders/create", { planId });
+export async function getOmiseConfigFromApi() {
+  const { data } = await api.get("/api/payments/omise-config");
+  return data ?? { publicKey: "" };
+}
+
+/**
+ * @param {string} planId UUID
+ * @param {string} omiseToken one-time token from Omise.js (e.g. tokn_test_…)
+ * @returns {Promise<SubscriptionCheckoutResponse>}
+ */
+export async function subscriptionCheckoutFromApi(planId, omiseToken) {
+  const { data } = await api.post("/api/subscriptions/checkout", {
+    planId,
+    omiseToken,
+  });
   return data;
 }
 
 /**
- * Single source of truth for payment success page after redirect.
- * @param {string} orderId
- * @returns {Promise<Order>}
+ * GET /api/subscriptions/{id} — JWT required; 404 if not owner.
+ * Response (SubscriptionDetailDto): id, status, currentPeriodStart, currentPeriodEnd,
+ * nextBillingDate, cancelAt, cancelledAt, autoRenew, createdAt, plan (PlanDto)
  */
-export async function getOrderFromApi(orderId) {
-  const { data } = await api.get(`/api/orders/${encodeURIComponent(orderId)}`);
+export async function getSubscriptionFromApi(subscriptionId) {
+  const { data } = await api.get(
+    `/api/subscriptions/${encodeURIComponent(subscriptionId)}`,
+  );
   return data;
 }
 
-/**
- * Sort plan list by `sort_order` ascending (see mock MerryPlans).
- * Items without `sort_order` / `sortOrder` sort last.
- * @param {unknown[]} plans
- * @returns {unknown[]}
- */
 export function sortPlansBySortOrder(plans) {
   if (!Array.isArray(plans)) return [];
   return [...plans].sort((a, b) => {
@@ -289,7 +401,7 @@ export function sortPlansBySortOrder(plans) {
   });
 }
 
-// --- Public API (toggle mock vs real) ----------------------------------------
+// --- Public API ---------------------------------------------------------------
 
 export async function getPlans() {
   const plans = USE_MOCK_API ? await getPlansMock() : await getPlansFromApi();
@@ -301,12 +413,58 @@ export async function getPlanById(id) {
   return normalizePlan(plan);
 }
 
-export async function createOrder(planId) {
-  return USE_MOCK_API ? createOrderMock(planId) : createOrderFromApi(planId);
+export async function getOmiseConfig() {
+  return USE_MOCK_API ? getOmiseConfigMock() : getOmiseConfigFromApi();
 }
 
+/**
+ * @param {string} planId
+ * @param {{ omiseToken: string }} payload
+ * @returns {Promise<SubscriptionCheckoutResponse>}
+ */
+export async function subscriptionCheckout(planId, payload) {
+  const token = payload?.omiseToken;
+  if (!token) {
+    return Promise.reject(new Error("Missing omiseToken"));
+  }
+  if (import.meta.env.DEV && USE_MOCK_API) {
+    console.warn(
+      "[planApi] Mock checkout: no call to Spring/Omise. Set VITE_USE_MOCK_API=false in .env.local to see charges in Omise Dashboard.",
+    );
+  }
+  return USE_MOCK_API
+    ? subscriptionCheckoutMock(planId, payload)
+    : subscriptionCheckoutFromApi(planId, token);
+}
+
+/**
+ * Mock: in-memory snapshot หลัง mock checkout.
+ * Real API: GET /api/subscriptions/{id} (SubscriptionDetailDto).
+ */
+export async function getSubscription(subscriptionId) {
+  return USE_MOCK_API
+    ? getSubscriptionMock(subscriptionId)
+    : getSubscriptionFromApi(subscriptionId);
+}
+
+/**
+ * Mock-only: lookup by charge id หลัง mock checkout
+ */
+export async function getSubscriptionByCharge(chargeId) {
+  if (!USE_MOCK_API) {
+    return Promise.reject(
+      new Error("getSubscriptionByCharge is mock-only; real API uses planId + getPlanById"),
+    );
+  }
+  return getSubscriptionByChargeMock(chargeId);
+}
+
+/** Legacy mock only: GET by old `orderId` query on success page */
 export async function getOrder(orderId) {
-  return USE_MOCK_API ? getOrderMock(orderId) : getOrderFromApi(orderId);
+  if (!USE_MOCK_API) {
+    return Promise.reject(new Error("Order lookup is not available; use subscriptionId or chargeId"));
+  }
+  return getOrderMock(orderId);
 }
 
 export { USE_MOCK_API };

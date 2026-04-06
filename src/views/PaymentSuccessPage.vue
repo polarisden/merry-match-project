@@ -24,7 +24,14 @@
           {{ line }}
         </h2>
       </header>
-      <!-- Section:merry plan card-->
+      <p
+        v-if="subscription?.status === 'pending' && !merryPlan"
+        class="body2 text-gray-700 px-[4px]"
+      >
+        Payment is pending. Reference:
+        <span class="font-mono">{{ subscription.chargeId || route.query.chargeId }}</span>
+      </p>
+      <!-- Section: merry plan card-->
       <main class="flex flex-col gap-[24px] lg:hidden">
         <MerryPlanCardSucess
           :loading="loading"
@@ -44,6 +51,13 @@
       </div>
     </div>
     <div class="hidden lg:flex lg:flex-col gap-[24px] mt-[88px] ml-[114px]">
+      <p
+        v-if="subscription?.status === 'pending' && !merryPlan"
+        class="body2 text-gray-700"
+      >
+        Payment pending — charge
+        <span class="font-mono">{{ subscription.chargeId || route.query.chargeId }}</span>
+      </p>
       <MerryPlanCardSucess
         :loading="loading"
         :error="error || ''"
@@ -56,8 +70,8 @@
 
 <script setup>
 /**
- * Loads the paid order via usePlan → getOrder() (real: GET /api/orders/:id).
- * Set VITE_USE_MOCK_API=false when backend is ready; mock persists orders in localStorage until then.
+ * Loads subscription after checkout: GET /api/subscriptions/:id (or charge fallback).
+ * Query: subscriptionId=… and/or chargeId=… (legacy mock: orderId=…).
  */
 import SuccessIcon from "@/assets/icons/success.svg";
 import BaseButtonPrimary from "../components/base/BaseButtonPrimary.vue";
@@ -81,10 +95,11 @@ const mobileHeadingLines = [
   "joining us",
 ];
 
-const { loading, error, successPlan: merryPlan, fetchOrderFromRoute } = usePlan();
+const { loading, error, successPlan: merryPlan, subscription, fetchSubscriptionFromRoute } =
+  usePlan();
 
 onMounted(async () => {
-  await fetchOrderFromRoute(route);
+  await fetchSubscriptionFromRoute(route);
 });
 
 function goHome() {
