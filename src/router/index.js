@@ -3,6 +3,7 @@ import HomePage from '@/views/HomePage.vue'
 import TestPage from '@/views/TestPage.vue'
 import RegisterPage from '@/views/RegisterPage.vue'
 import LoginPage from '@/views/LoginPage.vue'
+import MatchingPage from '@/views/MatchingPage.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -26,6 +27,7 @@ const router = createRouter({
       ]
     },
     { path: '/Login', component: LoginPage },
+    { path: '/matching', component: MatchingPage },
   ],
 })
 
