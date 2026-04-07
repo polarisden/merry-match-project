@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from "vue"
 import { useRouter } from "vue-router"
+import { apiUrl } from "@/lib/apiBase"
 
 const router = useRouter()
 
@@ -15,7 +16,7 @@ const loginLoading = ref(false)
 const loginError = ref("")
 
 // NOTE: If your backend uses a different path/field names, update this.
-const LOGIN_ENDPOINT = "/api/auth/login"
+const LOGIN_ENDPOINT = apiUrl("/api/auth/login")
 
 async function submitLogin() {
   loginError.value = ""
