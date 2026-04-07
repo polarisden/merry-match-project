@@ -1,3 +1,4 @@
+import { apiUrl } from "@/lib/apiBase"
 import { strField } from "./registerValidation"
 
 export function extractAuthToken(body) {
@@ -58,7 +59,7 @@ export function buildRegisterPayload(formValues, locationName, cityName, photos)
 }
 
 export async function submitRegisterRequest(payload) {
-  const res = await fetch("/api/auth/register", {
+  const res = await fetch(apiUrl("/api/auth/register"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

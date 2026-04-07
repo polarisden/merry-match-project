@@ -1,3 +1,5 @@
+import { apiUrl } from "@/lib/apiBase"
+
 function parseDuplicateCheckResult(body, field) {
   if (typeof body === "boolean") {
     return { available: body, message: body ? "" : "This value is already in use." }
@@ -45,18 +47,18 @@ export async function checkDuplicateField(field, value) {
   const requests =
     field === "email"
       ? [
-          { url: `/api/auth/check-availability?email=${encodeURIComponent(value)}`, method: "GET" },
-          { url: "/api/auth/check-availability", method: "POST", body: JSON.stringify({ email: value }) },
-          { url: `/api/auth/check-email?email=${encodeURIComponent(value)}`, method: "GET" },
-          { url: `/api/auth/check-duplicate?email=${encodeURIComponent(value)}`, method: "GET" },
-          { url: "/api/auth/check-duplicate", method: "POST", body: JSON.stringify({ email: value }) },
+          { url: apiUrl(`/api/auth/check-availability?email=${encodeURIComponent(value)}`), method: "GET" },
+          { url: apiUrl("/api/auth/check-availability"), method: "POST", body: JSON.stringify({ email: value }) },
+          { url: apiUrl(`/api/auth/check-email?email=${encodeURIComponent(value)}`), method: "GET" },
+          { url: apiUrl(`/api/auth/check-duplicate?email=${encodeURIComponent(value)}`), method: "GET" },
+          { url: apiUrl("/api/auth/check-duplicate"), method: "POST", body: JSON.stringify({ email: value }) },
         ]
       : [
-          { url: `/api/auth/check-availability?username=${encodeURIComponent(value)}`, method: "GET" },
-          { url: "/api/auth/check-availability", method: "POST", body: JSON.stringify({ username: value }) },
-          { url: `/api/auth/check-username?username=${encodeURIComponent(value)}`, method: "GET" },
-          { url: `/api/auth/check-duplicate?username=${encodeURIComponent(value)}`, method: "GET" },
-          { url: "/api/auth/check-duplicate", method: "POST", body: JSON.stringify({ username: value }) },
+          { url: apiUrl(`/api/auth/check-availability?username=${encodeURIComponent(value)}`), method: "GET" },
+          { url: apiUrl("/api/auth/check-availability"), method: "POST", body: JSON.stringify({ username: value }) },
+          { url: apiUrl(`/api/auth/check-username?username=${encodeURIComponent(value)}`), method: "GET" },
+          { url: apiUrl(`/api/auth/check-duplicate?username=${encodeURIComponent(value)}`), method: "GET" },
+          { url: apiUrl("/api/auth/check-duplicate"), method: "POST", body: JSON.stringify({ username: value }) },
         ]
 
   let sawReachableEndpoint = false
@@ -123,7 +125,7 @@ export async function checkDuplicateField(field, value) {
 }
 
 export async function fetchInterestsOptions() {
-  const res = await fetch("/api/interests")
+  const res = await fetch(apiUrl("/api/interests"))
   if (!res.ok) return { interestOptions: [], interestTags: [] }
 
   const contentType = res.headers.get("content-type") ?? ""
@@ -167,7 +169,7 @@ export async function submitMyInterestsRequest(token, selectedInterestTags, inte
 
   let lastError = ""
   for (const payload of payloadCandidates) {
-    const res = await fetch("/api/users/me/interests", {
+    const res = await fetch(apiUrl("/api/users/me/interests"), {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",

@@ -1,3 +1,5 @@
+import { apiUrl } from "@/lib/apiBase"
+
 function authHeaders(token) {
   const t = String(token || '').trim()
   if (!t) return {}
@@ -5,7 +7,7 @@ function authHeaders(token) {
 }
 
 export async function getMyProfile(token) {
-  const res = await fetch(`/api/users/me/profile`, {
+  const res = await fetch(apiUrl(`/api/users/me/profile`), {
     headers: { ...authHeaders(token) },
   })
   if (!res.ok) {
@@ -16,7 +18,7 @@ export async function getMyProfile(token) {
 }
 
 export async function updateMyProfile(payload, token) {
-  const res = await fetch(`/api/users/me/profile`, {
+  const res = await fetch(apiUrl(`/api/users/me/profile`), {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -36,7 +38,7 @@ export async function uploadMyProfileImage(file, { token, isPrimary = false } = 
   form.append('file', file)
   form.append('isPrimary', String(Boolean(isPrimary)))
 
-  const res = await fetch('/api/users/me/profile-images', {
+  const res = await fetch(apiUrl('/api/users/me/profile-images'), {
     method: 'POST',
     headers: {
       ...authHeaders(token),
@@ -53,7 +55,7 @@ export async function uploadMyProfileImage(file, { token, isPrimary = false } = 
 }
 
 export async function listMyProfileImages(token) {
-  const res = await fetch('/api/users/me/profile-images', {
+  const res = await fetch(apiUrl('/api/users/me/profile-images'), {
     headers: { ...authHeaders(token) },
   })
   if (!res.ok) {
@@ -65,7 +67,7 @@ export async function listMyProfileImages(token) {
 }
 
 export async function deleteMyProfileImage(imageId, token) {
-  const res = await fetch(`/api/users/me/profile-images/${encodeURIComponent(imageId)}`, {
+  const res = await fetch(apiUrl(`/api/users/me/profile-images/${encodeURIComponent(imageId)}`), {
     method: 'DELETE',
     headers: { ...authHeaders(token) },
   })
@@ -76,7 +78,7 @@ export async function deleteMyProfileImage(imageId, token) {
 }
 
 export async function deleteMyAccount(token) {
-  const res = await fetch(`/api/users/me`, {
+  const res = await fetch(apiUrl(`/api/users/me`), {
     method: 'DELETE',
     headers: { ...authHeaders(token) },
   })
