@@ -135,6 +135,20 @@ export async function fetchInterestsOptions() {
   }
 }
 
+export async function createInterest(name) {
+  const res = await fetch(apiUrl("/api/interests"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  })
+  const contentType = res.headers.get("content-type") ?? ""
+  const body = contentType.includes("application/json") ? await res.json() : await res.text()
+  if (!res.ok) {
+    throw new Error(typeof body === "string" ? body : body?.message ?? body?.error ?? `Create interest failed (${res.status})`)
+  }
+  return body
+}
+
 export async function submitMyInterestsRequest(token, selectedInterestTags, interestOptions) {
   if (!token || selectedInterestTags.length === 0) return { ok: true, error: "" }
 

@@ -254,8 +254,10 @@
             :interest-tags="interestTags"
             :selected-interest-tags="selectedInterestTags"
             :max="10"
+            :add-interest-by-name="addInterestByName"
             @toggle="handleToggleInterestTag"
             @remove="removeInterestTag"
+            @error="(msg) => (formError.value = msg)"
           />
           <BioTextarea v-model="bio" :max="150" />
         </div>
@@ -371,6 +373,7 @@ const {
   toggleInterestTag,
   removeInterestTag,
   fetchInterests,
+  addInterestByName,
 } = useRegisterInterests()
 
 const bio = ref("")
