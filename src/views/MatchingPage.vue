@@ -11,10 +11,35 @@ import heartLogo from '@/assets/icons/heart.svg'
 import filterLogo from '@/assets/icons/filter.svg'
 import mathNsearchLogo from '@/assets/icons/vector.svg'
 import merryMatchLogo from '@/assets/icons/merry_match.svg'
+import ProfilePreviewPopUp from '@/components/modals/ProfilePreviewPopUp.vue'
 import ProfilePreviewCard from '@/components/profile/ProfilePreviewCard.vue'
 import { ref, computed } from 'vue'
 
 const showPreview = ref(false)
+const showMobilePreview = ref(false)
+const showFilter = ref(false)
+
+const genderOptions = ref({ default: false, female: false, nonbinary: false })
+const filterMinAge = ref(18)
+const filterMaxAge = ref(50)
+
+const filterMinPercent = computed(() => ((filterMinAge.value - 18) / (100 - 18)) * 100)
+const filterMaxPercent = computed(() => ((filterMaxAge.value - 18) / (100 - 18)) * 100)
+
+function onFilterMinInput(e) {
+  const val = Number(e.target.value)
+  filterMinAge.value = Math.min(val, filterMaxAge.value - 1)
+}
+function onFilterMaxInput(e) {
+  const val = Number(e.target.value)
+  filterMaxAge.value = Math.max(val, filterMinAge.value + 1)
+}
+
+function clearFilter() {
+  genderOptions.value = { default: false, female: false, nonbinary: false }
+  filterMinAge.value = 18
+  filterMaxAge.value = 50
+}
 
 const minAge = ref(18)
 const maxAge = ref(50)
@@ -77,7 +102,7 @@ function onLike() {
             </div>
             <div
               class="w-8 h-8 flex justify-center items-center rounded-full bg-[#FFFFFF33] shadow-[2px_2px_12px_0px_#4032851F] transition-opacity duration-300 ease-out active:opacity-80 cursor-pointer"
-              @click="showPreview = true"
+              @click="showMobilePreview = true"
             >
               <frameLogo class="w-4 h-4" />
             </div>
@@ -108,7 +133,7 @@ function onLike() {
     </div>
 
     <footer class="h-[56px] relative mt-auto flex px-4 justify-between items-center">
-      <div class="flex gap-[10px]">
+      <div class="flex gap-[10px] cursor-pointer" @click="showFilter = true">
         <filterLogo />
         <span class="text-gray-500 body4">Filter</span>
       </div>
@@ -314,17 +339,98 @@ function onLike() {
       </div>
     </section>
   </div>
-  <!-- profile preview modal -->
+  <!-- filter bottom sheet (mobile) -->
+  <Teleport to="body">
+    <Transition name="sheet">
+      <div v-if="showFilter" class="fixed inset-0 z-50 flex flex-col justify-end lg:hidden">
+        <!-- backdrop -->
+        <div class="absolute inset-0 bg-[#00000080]" @click="showFilter = false" />
+        <!-- sheet -->
+        <div class="relative z-10 bg-white rounded-t-[24px] px-6 pt-6 pb-10 flex flex-col gap-6">
+          <!-- header -->
+          <div class="flex items-center justify-between">
+            <button @click="showFilter = false" class="cursor-pointer">
+              <xLogo class="size-6 text-black stroke-2" />
+            </button>
+            <span class="headline4 text-[#1A1A6E]">Filter</span>
+            <button class="body2 font-bold! text-red-500 cursor-pointer" @click="clearFilter">Clear</button>
+          </div>
+
+          <!-- gender -->
+          <div class="flex flex-col gap-4">
+            <span class="body2 font-bold! text-gray-900">Gender you interest</span>
+            <label class="flex gap-3 items-center cursor-pointer">
+              <input type="checkbox" v-model="genderOptions.default"
+                class="size-[18px] shrink-0 rounded border-2 border-purple-300 accent-purple-500" />
+              <span class="body2 font-medium!" :class="genderOptions.default ? 'text-gray-900' : 'text-gray-700'">Default</span>
+            </label>
+            <label class="flex gap-3 items-center cursor-pointer">
+              <input type="checkbox" v-model="genderOptions.female"
+                class="size-[18px] shrink-0 rounded border-2 border-purple-300 accent-purple-500" />
+              <span class="body2 font-medium!" :class="genderOptions.female ? 'text-gray-900' : 'text-gray-700'">Female</span>
+            </label>
+            <label class="flex gap-3 items-center cursor-pointer">
+              <input type="checkbox" v-model="genderOptions.nonbinary"
+                class="size-[18px] shrink-0 rounded border-2 border-purple-300 accent-purple-500" />
+              <span class="body2 font-medium!" :class="genderOptions.nonbinary ? 'text-gray-900' : 'text-gray-700'">Non-bunary people</span>
+            </label>
+          </div>
+
+          <!-- age range -->
+          <div class="flex flex-col gap-3">
+            <span class="body2 font-bold! text-gray-900">Age Range</span>
+            <div class="relative flex h-5 items-center">
+              <div class="absolute h-[4px] w-full rounded-full bg-gray-300"></div>
+              <div
+                class="absolute h-[4px] rounded-full bg-purple-500"
+                :style="{ left: `${filterMinPercent}%`, width: `${filterMaxPercent - filterMinPercent}%` }"
+              ></div>
+              <input type="range" min="18" max="100" step="1"
+                :value="filterMinAge" @input="onFilterMinInput"
+                class="range-thumb absolute inset-0 h-full w-full"
+                :style="{ zIndex: filterMinAge > filterMaxAge - 10 ? 20 : 10 }" />
+              <input type="range" min="18" max="100" step="1"
+                :value="filterMaxAge" @input="onFilterMaxInput"
+                class="range-thumb absolute inset-0 h-full w-full"
+                :style="{ zIndex: filterMinAge > filterMaxAge - 10 ? 10 : 20 }" />
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="flex h-[56px] flex-1 items-center justify-center rounded-2xl border border-gray-300">
+                <span class="body2 text-gray-600">{{ filterMinAge }}</span>
+              </div>
+              <span class="body2 text-gray-700">-</span>
+              <div class="flex h-[56px] flex-1 items-center justify-center rounded-2xl border border-gray-300">
+                <span class="body2 text-gray-600">{{ filterMaxAge }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- search button -->
+          <button class="w-full h-[56px] rounded-full bg-red-500 text-white body2 font-bold! cursor-pointer hover:bg-red-600 transition-colors"
+            @click="showFilter = false">
+            Search
+          </button>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+
+  <!-- profile preview modal (desktop) -->
+  <Teleport to="body">
+    <ProfilePreviewPopUp :open="showPreview" @close="showPreview = false" />
+  </Teleport>
+
+  <!-- profile preview modal (mobile) -->
   <Teleport to="body">
     <div
-      v-if="showPreview"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      @click.self="showPreview = false"
+      v-if="showMobilePreview"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 lg:hidden"
+      @click.self="showMobilePreview = false"
     >
       <div class="relative overflow-y-auto max-h-dvh rounded-[24px] shadow-2xl">
         <button
           class="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/80 flex items-center justify-center cursor-pointer hover:bg-white transition"
-          @click="showPreview = false"
+          @click="showMobilePreview = false"
         >
           <xLogo class="size-5 text-gray-700" />
         </button>
@@ -335,6 +441,14 @@ function onLike() {
 </template>
 
 <style scoped>
+.sheet-enter-active,
+.sheet-leave-active {
+  transition: transform 0.3s ease;
+}
+.sheet-enter-from .sheet-leave-to {
+  transform: translateY(100%);
+}
+
 .range-thumb {
   cursor: pointer;
   appearance: none;

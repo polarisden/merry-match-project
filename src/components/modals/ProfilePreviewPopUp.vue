@@ -98,7 +98,7 @@
               </h1>
 
               <p class="flex items-center gap-1.5 body1 text-gray-700">
-                <LocationIcon class="text-6" />
+                <LocationIcon class="size-6 text-red-200" />
                 <span>{{ displayLocation }}</span>
               </p>
             </div>
