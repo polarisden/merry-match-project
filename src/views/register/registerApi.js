@@ -44,22 +44,12 @@ function isDuplicateMessage(message) {
 }
 
 export async function checkDuplicateField(field, value) {
-  const requests =
+  // Backend supports only: GET /api/auth/check-availability?email=... or ?username=...
+  const query =
     field === "email"
-      ? [
-          { url: apiUrl(`/api/auth/check-availability?email=${encodeURIComponent(value)}`), method: "GET" },
-          { url: apiUrl("/api/auth/check-availability"), method: "POST", body: JSON.stringify({ email: value }) },
-          { url: apiUrl(`/api/auth/check-email?email=${encodeURIComponent(value)}`), method: "GET" },
-          { url: apiUrl(`/api/auth/check-duplicate?email=${encodeURIComponent(value)}`), method: "GET" },
-          { url: apiUrl("/api/auth/check-duplicate"), method: "POST", body: JSON.stringify({ email: value }) },
-        ]
-      : [
-          { url: apiUrl(`/api/auth/check-availability?username=${encodeURIComponent(value)}`), method: "GET" },
-          { url: apiUrl("/api/auth/check-availability"), method: "POST", body: JSON.stringify({ username: value }) },
-          { url: apiUrl(`/api/auth/check-username?username=${encodeURIComponent(value)}`), method: "GET" },
-          { url: apiUrl(`/api/auth/check-duplicate?username=${encodeURIComponent(value)}`), method: "GET" },
-          { url: apiUrl("/api/auth/check-duplicate"), method: "POST", body: JSON.stringify({ username: value }) },
-        ]
+      ? `email=${encodeURIComponent(value)}`
+      : `username=${encodeURIComponent(value)}`
+  const requests = [{ url: apiUrl(`/api/auth/check-availability?${query}`), method: "GET" }]
 
   let sawReachableEndpoint = false
 
