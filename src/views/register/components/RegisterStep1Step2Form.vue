@@ -345,12 +345,6 @@
         Hobbies / Interests (Maximum 10)
       </label>
       <div class="w-full min-h-11 px-2 py-2 border border-gray-300 rounded-lg bg-gray-100 lg:bg-white flex flex-wrap gap-1.5">
-        <span
-          v-if="selectedInterestTags.length === 0"
-          class="body2 text-gray-500 px-1 py-0.5"
-        >
-          Select interests
-        </span>
         <button
           v-for="tag in selectedInterestTags"
           :key="`selected-${tag}`"
@@ -358,8 +352,15 @@
           class="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-purple-100 body4 text-purple-500 leading-none"
           @click="removeInterestTag(tag)"
         >
-          {{ tag }} <span class="text-purple-300">x</span>
+          {{ tag }} <span class="text-purple-300 hover:cursor-pointer">x</span>
         </button>
+        <input
+          v-model="newInterestKeyword"
+          type="text"
+          class="h-8 min-w-[120px] flex-1 bg-transparent px-1 body4 text-black outline-none placeholder:text-gray-500"
+          placeholder="Select or type interests (press Enter)"
+          @keydown.enter.prevent="handleAddInterestKeyword"
+        />
       </div>
 
       <div class="mt-2 w-full rounded-xl border border-gray-200 bg-gray-100 lg:bg-white shadow-sm p-2 max-h-56 overflow-y-auto flex flex-wrap gap-2">
@@ -367,7 +368,7 @@
           v-for="tag in interestTags"
           :key="tag"
           type="button"
-          class="px-3 py-1.5 rounded-md body2 border transition"
+          class="px-3 py-1.5 rounded-md body2 border transition hover:cursor-pointer"
           :class="selectedInterestTags.includes(tag)
             ? 'border-purple-300 bg-purple-100 text-purple-500'
             : 'border-gray-300 text-gray-700 hover:bg-gray-200'"
@@ -444,11 +445,13 @@ const props = defineProps({
   selectMeetingInterest: { type: Function, required: true },
   toggleInterestTag: { type: Function, required: true },
   removeInterestTag: { type: Function, required: true },
+  addInterestByName: { type: Function, required: false, default: null },
 })
 
 const emit = defineEmits(["update:registerError"])
 
 const passwordVisibleKeys = ref(new Set())
+const newInterestKeyword = ref("")
 
 function isPasswordVisible(modelKey) {
   return passwordVisibleKeys.value.has(String(modelKey))
@@ -460,6 +463,25 @@ function togglePasswordVisible(modelKey) {
   if (next.has(key)) next.delete(key)
   else next.add(key)
   passwordVisibleKeys.value = next
+}
+
+async function handleAddInterestKeyword() {
+  const keyword = String(newInterestKeyword.value || "").trim()
+  if (!keyword) return
+  if (!props.addInterestByName) {
+    emit("update:registerError", "Interest creation is not available.")
+    return
+  }
+  try {
+    const existsInDb = props.interestTags?.some(
+      (t) => String(t || "").trim().toLowerCase() === keyword.toLowerCase(),
+    )
+    emit("update:registerError", existsInDb ? "Interest already exists." : "")
+    await props.addInterestByName(keyword)
+    newInterestKeyword.value = ""
+  } catch (e) {
+    emit("update:registerError", e instanceof Error ? e.message : "Create interest failed")
+  }
 }
 
 function handleBioInput() {

@@ -79,6 +79,7 @@ const {
   toggleInterestTag: toggleInterestTagRaw,
   removeInterestTag,
   fetchInterests,
+  addInterestByName,
 } = useRegisterInterests()
 function toggleInterestTag(tag) {
   if (!selectedInterestTags.value.includes(tag) && selectedInterestTags.value.length >= 10) {
@@ -265,6 +266,7 @@ function goBack() {
         :select-meeting-interest="selectMeetingInterest"
         :toggle-interest-tag="toggleInterestTag"
         :remove-interest-tag="removeInterestTag"
+        :add-interest-by-name="addInterestByName"
       />
     </div>
 
