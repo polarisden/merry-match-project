@@ -1,3 +1,59 @@
+<script setup>
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import BaseButtonSecondary from "@/components/base/BaseButtonSecondary.vue";
+import BaseButtonPrimary from "@/components/base/BaseButtonPrimary.vue";
+import EditProfileForm from "@/components/profile/EditProfileForm.vue";
+import ConfirmationModal from "@/components/modals/ConfirmModal.vue";
+import ProfilePreviewPopUp from "@/components/modals/ProfilePreviewPopUp.vue";
+import { deleteMyAccount } from "@/views/profile/profileApi";
+
+const router = useRouter();
+const isDeleteModalOpen = ref(false);
+const isProfilePreviewOpen = ref(false);
+const editProfileFormRef = ref(null);
+const deleteError = ref("");
+const deleting = ref(false);
+
+function goToPreviewProfile() {
+  if (window.matchMedia("(min-width: 1024px)").matches) {
+    isProfilePreviewOpen.value = true;
+    return;
+  }
+  router.push({ name: "preview-profile" });
+}
+
+function openDeleteModal() {
+  isDeleteModalOpen.value = true;
+}
+
+function closeDeleteModal() {
+  isDeleteModalOpen.value = false;
+}
+
+async function confirmDeleteAccount() {
+  if (deleting.value) return;
+  deleteError.value = "";
+  deleting.value = true;
+  try {
+    const token = localStorage.getItem("token") ?? "";
+    await deleteMyAccount(token);
+    localStorage.removeItem("token");
+    isDeleteModalOpen.value = false;
+    router.push("/");
+  } catch (e) {
+    deleteError.value = e instanceof Error ? e.message : "Delete account failed";
+    isDeleteModalOpen.value = false;
+  } finally {
+    deleting.value = false;
+  }
+}
+
+function updateProfile() {
+  editProfileFormRef.value?.submitUpdate?.();
+}
+</script>
+
 <template>
   <main class="min-h-dvh bg-gray-100 px-4 pt-5 pb-12 lg:bg-white lg:px-10 lg:pt-10">
     <section class="mx-auto w-full max-w-[390px] flex flex-col gap-10 lg:max-w-[930px]">
@@ -51,59 +107,3 @@
     />
   </main>
 </template>
-
-<script setup>
-import { ref } from "vue";
-import { useRouter } from "vue-router";
-import BaseButtonSecondary from "@/components/base/BaseButtonSecondary.vue";
-import BaseButtonPrimary from "@/components/base/BaseButtonPrimary.vue";
-import EditProfileForm from "@/components/profile/EditProfileForm.vue";
-import ConfirmationModal from "@/components/modals/ConfirmModal.vue";
-import ProfilePreviewPopUp from "@/components/modals/ProfilePreviewPopUp.vue";
-import { deleteMyAccount } from "@/views/profile/profileApi";
-
-const router = useRouter();
-const isDeleteModalOpen = ref(false);
-const isProfilePreviewOpen = ref(false);
-const editProfileFormRef = ref(null)
-const deleteError = ref("")
-const deleting = ref(false)
-
-function goToPreviewProfile() {
-  if (window.matchMedia("(min-width: 1024px)").matches) {
-    isProfilePreviewOpen.value = true;
-    return;
-  }
-  router.push({ name: "preview-profile" });
-}
-
-function openDeleteModal() {
-  isDeleteModalOpen.value = true;
-}
-
-function closeDeleteModal() {
-  isDeleteModalOpen.value = false;
-}
-
-async function confirmDeleteAccount() {
-  if (deleting.value) return
-  deleteError.value = ""
-  deleting.value = true
-  try {
-    const token = localStorage.getItem("token") ?? ""
-    await deleteMyAccount(token)
-    localStorage.removeItem("token")
-    isDeleteModalOpen.value = false;
-    router.push("/")
-  } catch (e) {
-    deleteError.value = e instanceof Error ? e.message : "Delete account failed"
-    isDeleteModalOpen.value = false;
-  } finally {
-    deleting.value = false
-  }
-}
-
-function updateProfile() {
-  editProfileFormRef.value?.submitUpdate?.()
-}
-</script>

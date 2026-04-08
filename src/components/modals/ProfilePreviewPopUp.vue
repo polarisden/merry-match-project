@@ -1,3 +1,45 @@
+<script setup>
+import { watch } from "vue"
+import ExitIcon from "@/assets/icons/exit.svg?component"
+import ArrowIcon from "@/assets/icons/arrow.svg?component"
+import LocationIcon from "@/assets/icons/location.svg?component"
+import { useProfilePreviewData } from "@/components/profile/composables/useProfilePreviewData"
+
+const props = defineProps({
+  open: {
+    type: Boolean,
+    default: false,
+  },
+})
+
+const emit = defineEmits(["close"])
+
+const {
+  loading,
+  loadError,
+  loadPreview,
+  displayName,
+  displayAge,
+  displayLocation,
+  aboutText,
+  hobbyTags,
+  fields,
+  photoCount,
+  currentPhotoSrc,
+  currentPhotoNumber,
+  photoAltText,
+  showPreviousPhoto,
+  showNextPhoto,
+} = useProfilePreviewData()
+
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) loadPreview()
+  },
+)
+</script>
+
 <template>
   <div
     v-if="open"
@@ -145,45 +187,3 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import { watch } from "vue"
-import ExitIcon from "@/assets/icons/exit.svg?component"
-import ArrowIcon from "@/assets/icons/arrow.svg?component"
-import LocationIcon from "@/assets/icons/location.svg?component"
-import { useProfilePreviewData } from "@/components/profile/composables/useProfilePreviewData"
-
-const props = defineProps({
-  open: {
-    type: Boolean,
-    default: false,
-  },
-})
-
-const emit = defineEmits(["close"])
-
-const {
-  loading,
-  loadError,
-  loadPreview,
-  displayName,
-  displayAge,
-  displayLocation,
-  aboutText,
-  hobbyTags,
-  fields,
-  photoCount,
-  currentPhotoSrc,
-  currentPhotoNumber,
-  photoAltText,
-  showPreviousPhoto,
-  showNextPhoto,
-} = useProfilePreviewData()
-
-watch(
-  () => props.open,
-  (isOpen) => {
-    if (isOpen) loadPreview()
-  },
-)
-</script>

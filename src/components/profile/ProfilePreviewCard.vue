@@ -1,3 +1,39 @@
+<script setup>
+import { onMounted } from "vue"
+import { useRouter } from "vue-router"
+import ArrowIcon from '@/assets/icons/arrow.svg?component'
+import LocationIcon from '@/assets/icons/location.svg?component'
+import { useProfilePreviewData } from '@/components/profile/composables/useProfilePreviewData'
+
+const router = useRouter()
+
+const {
+  loading,
+  loadError,
+  loadPreview,
+  displayName,
+  displayAge,
+  displayLocation,
+  aboutText,
+  hobbyTags,
+  fields,
+  photoCount,
+  currentPhotoSrc,
+  currentPhotoNumber,
+  photoAltText,
+  showPreviousPhoto,
+  showNextPhoto,
+} = useProfilePreviewData()
+
+function goToEditProfile() {
+  router.push({ name: "edit-profile" })
+}
+
+onMounted(() => {
+  loadPreview()
+})
+</script>
+
 <template>
   <article
     class="relative mx-auto min-h-dvh bg-white font-[Nunito,sans-serif] flex flex-col w-full max-w-[390px]"
@@ -139,39 +175,3 @@
     </div>
   </article>
 </template>
-
-<script setup>
-import { onMounted } from "vue"
-import { useRouter } from "vue-router"
-import ArrowIcon from '@/assets/icons/arrow.svg?component'
-import LocationIcon from '@/assets/icons/location.svg?component'
-import { useProfilePreviewData } from '@/components/profile/composables/useProfilePreviewData'
-
-const router = useRouter()
-
-const {
-  loading,
-  loadError,
-  loadPreview,
-  displayName,
-  displayAge,
-  displayLocation,
-  aboutText,
-  hobbyTags,
-  fields,
-  photoCount,
-  currentPhotoSrc,
-  currentPhotoNumber,
-  photoAltText,
-  showPreviousPhoto,
-  showNextPhoto,
-} = useProfilePreviewData()
-
-function goToEditProfile() {
-  router.push({ name: "edit-profile" })
-}
-
-onMounted(() => {
-  loadPreview()
-})
-</script>
