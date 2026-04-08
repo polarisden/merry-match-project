@@ -1,28 +1,37 @@
 <script setup>
+import { onMounted } from "vue"
 import { useRouter } from "vue-router"
 import ArrowIcon from '@/assets/icons/arrow.svg?component'
 import LocationIcon from '@/assets/icons/location.svg?component'
-import placeholderPhotoSrc from '@/assets/images/profile-pic.png'
+import { useProfilePreviewData } from '@/components/profile/composables/useProfilePreviewData'
 
 const router = useRouter()
 
-/** Placeholder copy for layout; replace with props or store when the backend is wired up. */
-const displayName = 'Jon Snow'
-const displayAge = '26'
-const displayLocation = 'Bangkok, Thailand'
-const aboutText = 'I know nothing..but you'
-const hobbyTags = ['e-sport', 'dragon', 'series']
-const fields = {
-  identity: 'Male',
-  preference: 'Female',
-  racial: 'Asian',
-  meeting: 'Friends',
-}
+const {
+  loading,
+  loadError,
+  loadPreview,
+  displayName,
+  displayAge,
+  displayLocation,
+  aboutText,
+  hobbyTags,
+  fields,
+  photoCount,
+  currentPhotoSrc,
+  currentPhotoNumber,
+  photoAltText,
+  showPreviousPhoto,
+  showNextPhoto,
+} = useProfilePreviewData()
 
 function goToEditProfile() {
   router.push({ name: "edit-profile" })
 }
 
+onMounted(() => {
+  loadPreview()
+})
 </script>
 
 <template>
@@ -166,39 +175,3 @@ function goToEditProfile() {
     </div>
   </article>
 </template>
-
-<script setup>
-import { onMounted } from "vue"
-import { useRouter } from "vue-router"
-import ArrowIcon from '@/assets/icons/arrow.svg?component'
-import LocationIcon from '@/assets/icons/location.svg?component'
-import { useProfilePreviewData } from '@/components/profile/composables/useProfilePreviewData'
-
-const router = useRouter()
-
-const {
-  loading,
-  loadError,
-  loadPreview,
-  displayName,
-  displayAge,
-  displayLocation,
-  aboutText,
-  hobbyTags,
-  fields,
-  photoCount,
-  currentPhotoSrc,
-  currentPhotoNumber,
-  photoAltText,
-  showPreviousPhoto,
-  showNextPhoto,
-} = useProfilePreviewData()
-
-function goToEditProfile() {
-  router.push({ name: "edit-profile" })
-}
-
-onMounted(() => {
-  loadPreview()
-})
-</script>

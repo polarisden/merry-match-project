@@ -1,28 +1,123 @@
 <script setup>
-import { ref } from "vue";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import CalendarPicker from "@/components/ui/CalendarPicker.vue";
-import profilePicSrc from "@/assets/images/profile-pic.png";
+import { useNotices } from "@/components/ui/composables/useNotices";
+import BioTextarea from "@/components/ui/BioTextarea.vue";
+import ProfileInterestsPicker from "@/components/profile/ProfileInterestsPicker.vue";
+
+import { useRegisterFormState } from "@/views/register/useRegisterFormState";
+import {
+  meetingInterestOptions,
+  racialPreferenceOptions,
+  sexualIdentityOptions,
+  sexualPreferenceOptions,
+} from "@/views/register/registerConstants";
+import { useRegisterInterests } from "@/views/register/useRegisterInterests";
+import { deleteMyProfileImage, getMyProfile, listMyProfileImages, updateMyProfile, uploadMyProfileImage } from "@/views/profile/profileApi";
+import { useEditProfileImages } from "@/components/profile/composables/useEditProfileImages";
+import { useEditProfileSync } from "@/components/profile/composables/useEditProfileSync";
 
 const emit = defineEmits(["delete-account"]);
 
-const dateOfBirth = ref("");
+const {
+  formValues,
+  openDropdown,
+  locationOptions,
+  cityOptions,
+  selectedLocationLabel,
+  selectedCityLabel,
+  selectedSexualIdentityLabel,
+  selectedSexualPreferenceLabel,
+  selectedRacialPreferenceLabel,
+  selectedMeetingInterestLabel,
+  toggleDropdown,
+  selectLocation,
+  selectCity,
+  selectSexualIdentity,
+  selectSexualPreference,
+  selectRacialPreference,
+  selectMeetingInterest,
+  handleDocumentClick,
+} = useRegisterFormState();
 
-const identityFields = [
-  { label: "Sexual identities", placeholder: "Male" },
-  { label: "Sexual preferences", placeholder: "Female" },
-  { label: "Racial preferences", placeholder: "Asian" },
-  { label: "Meeting interests", placeholder: "Friends" },
-];
+const {
+  interestTags,
+  selectedInterestTags,
+  interestOptions,
+  toggleInterestTag,
+  removeInterestTag,
+  fetchInterests,
+  addInterestByName,
+} = useRegisterInterests()
 
-const interestTags = ["e-sport", "series", "dragon"];
+const bio = ref("")
+const token = ref(localStorage.getItem("token") ?? "")
 
-const photoSlots = [
-  { key: "photo-1", label: "Upload photo", image: profilePicSrc },
-  { key: "photo-2", label: "Upload photo", image: profilePicSrc },
-  { key: "slot-3", label: "Upload photo", image: null },
-  { key: "slot-4", label: "Upload photo", image: null },
-  { key: "slot-5", label: "Upload photo", image: null },
-];
+const { error: formError, success: formSuccess, loading: formLoading, clear: clearNotices, setError: setFormError, setSuccess: setFormSuccess, setLoading } = useNotices()
+
+const {
+  photoSlots,
+  imageInputRef,
+  uploadedImagesCount,
+  triggerImagePicker,
+  handleSelectedImage,
+  deleteImageForSlot,
+  handleImageLoadError,
+  setSlotsFromApiImages,
+  cleanupObjectUrls,
+} = useEditProfileImages({
+  tokenRef: token,
+  setFormError,
+  clearNotices,
+  setLoading,
+  uploadMyProfileImage,
+  deleteMyProfileImage,
+})
+
+const { loadProfile, submitUpdate: submitUpdateInternal } = useEditProfileSync({
+  tokenRef: token,
+  formValues,
+  locationOptions,
+  cityOptions,
+  selectedLocationLabel,
+  selectedCityLabel,
+  bioRef: bio,
+  selectedInterestTags,
+  interestOptions,
+  fetchInterests,
+  setSlotsFromApiImages,
+  setFormError,
+  setFormSuccess,
+  clearNotices,
+  setLoading,
+  getMyProfile,
+  listMyProfileImages,
+  updateMyProfile,
+})
+
+function submitUpdate() {
+  return submitUpdateInternal({ uploadedImagesCount: uploadedImagesCount.value })
+}
+
+function handleToggleInterestTag(tag) {
+  if (!selectedInterestTags.value.includes(tag) && selectedInterestTags.value.length >= 10) {
+    formError.value = "ครบ 10 อันแล้ว"
+    return
+  }
+  toggleInterestTag(tag)
+}
+
+defineExpose({ submitUpdate })
+
+onMounted(() => {
+  document.addEventListener("click", handleDocumentClick);
+  loadProfile()
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("click", handleDocumentClick);
+  cleanupObjectUrls()
+});
 </script>
 
 <template>
@@ -350,125 +445,3 @@ const photoSlots = [
     </button>
   </div>
 </template>
-
-<script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import CalendarPicker from "@/components/ui/CalendarPicker.vue";
-import { useNotices } from "@/components/ui/composables/useNotices";
-import BioTextarea from "@/components/ui/BioTextarea.vue";
-import ProfileInterestsPicker from "@/components/profile/ProfileInterestsPicker.vue";
-
-import { useRegisterFormState } from "@/views/register/useRegisterFormState";
-import {
-  meetingInterestOptions,
-  racialPreferenceOptions,
-  sexualIdentityOptions,
-  sexualPreferenceOptions,
-} from "@/views/register/registerConstants";
-import { useRegisterInterests } from "@/views/register/useRegisterInterests";
-import { deleteMyProfileImage, getMyProfile, listMyProfileImages, updateMyProfile, uploadMyProfileImage } from "@/views/profile/profileApi";
-import { useEditProfileImages } from "@/components/profile/composables/useEditProfileImages";
-import { useEditProfileSync } from "@/components/profile/composables/useEditProfileSync";
-
-const emit = defineEmits(["delete-account"]);
-
-const {
-  formValues,
-  openDropdown,
-  locationOptions,
-  cityOptions,
-  selectedLocationLabel,
-  selectedCityLabel,
-  selectedSexualIdentityLabel,
-  selectedSexualPreferenceLabel,
-  selectedRacialPreferenceLabel,
-  selectedMeetingInterestLabel,
-  toggleDropdown,
-  selectLocation,
-  selectCity,
-  selectSexualIdentity,
-  selectSexualPreference,
-  selectRacialPreference,
-  selectMeetingInterest,
-  handleDocumentClick,
-} = useRegisterFormState();
-
-const {
-  interestTags,
-  selectedInterestTags,
-  interestOptions,
-  toggleInterestTag,
-  removeInterestTag,
-  fetchInterests,
-  addInterestByName,
-} = useRegisterInterests()
-
-const bio = ref("")
-const token = ref(localStorage.getItem("token") ?? "")
-
-const { error: formError, success: formSuccess, loading: formLoading, clear: clearNotices, setError: setFormError, setSuccess: setFormSuccess, setLoading } = useNotices()
-
-const {
-  photoSlots,
-  imageInputRef,
-  uploadedImagesCount,
-  triggerImagePicker,
-  handleSelectedImage,
-  deleteImageForSlot,
-  handleImageLoadError,
-  setSlotsFromApiImages,
-  cleanupObjectUrls,
-} = useEditProfileImages({
-  tokenRef: token,
-  setFormError,
-  clearNotices,
-  setLoading,
-  uploadMyProfileImage,
-  deleteMyProfileImage,
-})
-
-const { loadProfile, submitUpdate: submitUpdateInternal } = useEditProfileSync({
-  tokenRef: token,
-  formValues,
-  locationOptions,
-  cityOptions,
-  selectedLocationLabel,
-  selectedCityLabel,
-  bioRef: bio,
-  selectedInterestTags,
-  interestOptions,
-  fetchInterests,
-  setSlotsFromApiImages,
-  setFormError,
-  setFormSuccess,
-  clearNotices,
-  setLoading,
-  getMyProfile,
-  listMyProfileImages,
-  updateMyProfile,
-})
-
-function submitUpdate() {
-  return submitUpdateInternal({ uploadedImagesCount: uploadedImagesCount.value })
-}
-
-function handleToggleInterestTag(tag) {
-  if (!selectedInterestTags.value.includes(tag) && selectedInterestTags.value.length >= 10) {
-    formError.value = "ครบ 10 อันแล้ว"
-    return
-  }
-  toggleInterestTag(tag)
-}
-
-defineExpose({ submitUpdate })
-
-onMounted(() => {
-  document.addEventListener("click", handleDocumentClick);
-  loadProfile()
-});
-
-onBeforeUnmount(() => {
-  document.removeEventListener("click", handleDocumentClick);
-  cleanupObjectUrls()
-});
-</script>
