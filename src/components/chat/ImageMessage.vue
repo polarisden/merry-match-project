@@ -6,9 +6,9 @@ defineProps({
   },
   alt: {
     type: String,
-    default: '',
+    default: "",
   },
-})
+});
 </script>
 
 <template>
