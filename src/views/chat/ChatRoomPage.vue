@@ -56,7 +56,7 @@ function onSendImageDraft({ file, caption }) {
 </script>
 
 <template>
-  <div class="min-h-dvh bg-bg">
+  <div class="min-h-dvh w-full min-w-0 bg-bg">
     <span class="sr-only" aria-live="polite">
       Unread messages elsewhere: {{ unreadTotal }}
     </span>
@@ -67,12 +67,14 @@ function onSendImageDraft({ file, caption }) {
       aria-hidden="true"
     />
 
-    <div class="min-h-dvh lg:min-h-[calc(100dvh-4rem)] lg:grid lg:grid-cols-[316px_1fr]">
-      <!-- Reserve space for future sidebar on lg+ -->
-
-      <!-- Chat column -->
-      <div class="flex w-full max-w-md flex-col mx-auto lg:mx-0 lg:max-w-none">
-        <div class="flex h-dvh flex-col lg:h-[calc(100dvh-4rem)]">
+    <div
+      class="min-h-dvh w-full min-w-0 lg:min-h-[calc(100dvh-4rem)]"
+    >
+      <!-- Chat column: full viewport width under the optional top bar -->
+      <div class="flex min-w-0 w-full flex-col">
+        <div
+          class="flex min-h-0 h-dvh flex-col lg:h-[calc(100dvh-4rem)]"
+        >
           <ChatHeader :contact-name="contactName" />
 
           <p
@@ -122,12 +124,6 @@ function onSendImageDraft({ file, caption }) {
               >
                 <p class="body2 text-gray-600">
                   No messages yet. Say hi to start the conversation.
-                </p>
-                <p
-                  v-if="isDev"
-                  class="mt-2 body5 text-gray-400"
-                >
-                  Room ID (mock / query <code class="rounded bg-gray-200 px-1">room</code>): {{ chatRoomId }}
                 </p>
               </div>
 
@@ -184,23 +180,22 @@ function onSendImageDraft({ file, caption }) {
               </div>
             </template>
           </ChatList>
+
+          <div
+            class="relative z-10 w-full min-w-0 shrink-0"
+            :aria-busy="sending || uploading"
+          >
+            <MessageInput
+              :disabled="loading"
+              :sending="sending"
+              :uploading="uploading"
+              @send="sendText"
+              @send-image="onSendImageDraft"
+              @image-error="onChatImagePickError"
+            />
+          </div>
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- Full-width input bar -->
-  <div
-    class="fixed inset-x-0 bottom-0 z-20 lg:left-[317px]"
-    :aria-busy="sending || uploading"
-  >
-    <MessageInput
-      :disabled="loading"
-      :sending="sending"
-      :uploading="uploading"
-      @send="sendText"
-      @send-image="onSendImageDraft"
-      @image-error="onChatImagePickError"
-    />
   </div>
 </template>

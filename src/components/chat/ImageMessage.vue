@@ -12,7 +12,7 @@ defineProps({
 </script>
 
 <template>
-  <div class="max-w-[80%] w-[240px] h-[240px] overflow-hidden rounded-2xl p-1">
+  <div class="w-[240px] h-[240px] overflow-hidden rounded-2xl p-1">
     <img
       :src="src"
       :alt="alt"

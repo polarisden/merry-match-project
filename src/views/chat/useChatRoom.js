@@ -7,6 +7,7 @@ import {
   fetchUnreadSummary,
   markChatRoomRead,
   normalizeMessage,
+  patchChatRoomLastMessage,
   sendChatMessage,
   uploadChatImage,
 } from "@/views/chat/chatApi"
@@ -189,6 +190,37 @@ export function useChatRoom(route) {
     realtimeChannel = null
   }
 
+  /** @param {string} roomId @param {ReturnType<typeof normalizeMessage>} dto */
+  async function syncChatRoomLastMessage(roomId, dto) {
+    const t = token.value
+    if (!t || !roomId || !dto?.id) return
+    const sid = dto.senderId || currentUserId.value || ""
+    if (!sid) return
+    const preview =
+      dto.messageType === "image"
+        ? dto.messageText && String(dto.messageText).trim()
+          ? String(dto.messageText).trim()
+          : "Photo"
+        : dto.messageText != null
+          ? String(dto.messageText)
+          : ""
+    const at = dto.createdAt && String(dto.createdAt).trim() ? String(dto.createdAt) : new Date().toISOString()
+    try {
+      await patchChatRoomLastMessage(
+        roomId,
+        t,
+        {
+          lastMessageText: preview || null,
+          lastMessageType: dto.messageType,
+          lastMessageAt: at,
+          lastSenderId: String(sid),
+        },
+      )
+    } catch {
+      /* Backend may already update chat_rooms in POST /messages */
+    }
+  }
+
   async function loadPeerInfo() {
     peerName.value = ""
     peerImageUrl.value = null
@@ -272,6 +304,7 @@ export function useChatRoom(route) {
         { senderId: currentUserId.value },
       )
       upsertIncomingMessage(dto)
+      await syncChatRoomLastMessage(roomId, dto)
     } catch (e) {
       sendError.value = e instanceof Error ? e.message : "Send failed"
     } finally {
@@ -303,6 +336,7 @@ export function useChatRoom(route) {
         { senderId: currentUserId.value },
       )
       upsertIncomingMessage(dto)
+      await syncChatRoomLastMessage(roomId, dto)
     } catch (e) {
       sendError.value = e instanceof Error ? e.message : "Image send failed"
     } finally {

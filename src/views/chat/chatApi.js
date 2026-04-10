@@ -15,10 +15,38 @@ import { assertChatImageFile } from "@/views/chat/chatImageRules"
  * }} ChatMessageDto
  */
 
+/**
+ * Row from `chat_rooms` (+ optional joined peer fields from API).
+ * @typedef {{
+ *   id: string
+ *   matchId: string
+ *   createdAt: string | null
+ *   lastMessageText: string | null
+ *   lastMessageType: string | null
+ *   lastMessageAt: string | null
+ *   lastSenderId: string | null
+ *   peerName: string
+ *   peerImageUrl: string | null
+ *   unreadCount: number
+ * }} ChatRoomListDto
+ */
+
 function authHeaders(token) {
   const t = String(token || "").trim()
   if (!t) return {}
   return { Authorization: t.toLowerCase().startsWith("bearer ") ? t : `Bearer ${t}` }
+}
+
+async function readApiErrorMessage(res) {
+  const raw = await res.text().catch(() => "")
+  if (!raw) return ""
+  try {
+    const j = JSON.parse(raw)
+    const m = j?.message ?? j?.error_description ?? j?.error
+    return typeof m === "string" && m.trim() ? m.trim() : raw
+  } catch {
+    return raw
+  }
 }
 
 /**
@@ -119,6 +147,119 @@ async function uploadChatImageSupabase(chatRoomId, file) {
  * @param {unknown} row
  * @returns {ChatMessageDto}
  */
+/**
+ * @param {unknown} row
+ * @returns {ChatRoomListDto}
+ */
+export function normalizeChatRoom(row) {
+  if (!row || typeof row !== "object") {
+    return {
+      id: "",
+      matchId: "",
+      createdAt: null,
+      lastMessageText: null,
+      lastMessageType: null,
+      lastMessageAt: null,
+      lastSenderId: null,
+      peerName: "",
+      peerImageUrl: null,
+      unreadCount: 0,
+    }
+  }
+  const r = /** @type {Record<string, unknown>} */ (row)
+  const peerName =
+    r.peer_name != null
+      ? String(r.peer_name)
+      : r.peerName != null
+        ? String(r.peerName)
+        : r.peer_display_name != null
+          ? String(r.peer_display_name)
+          : ""
+  const peerImg =
+    r.peer_image_url != null
+      ? String(r.peer_image_url)
+      : r.peerImageUrl != null
+        ? String(r.peerImageUrl)
+        : r.peer_avatar_url != null
+          ? String(r.peer_avatar_url)
+          : null
+  return {
+    id: String(r.id ?? ""),
+    matchId: String(r.match_id ?? r.matchId ?? ""),
+    createdAt: r.created_at != null ? String(r.created_at) : r.createdAt != null ? String(r.createdAt) : null,
+    lastMessageText:
+      r.last_message_text != null
+        ? String(r.last_message_text)
+        : r.lastMessageText != null
+          ? String(r.lastMessageText)
+          : null,
+    lastMessageType:
+      r.last_message_type != null
+        ? String(r.last_message_type)
+        : r.lastMessageType != null
+          ? String(r.lastMessageType)
+          : null,
+    lastMessageAt:
+      r.last_message_at != null
+        ? String(r.last_message_at)
+        : r.lastMessageAt != null
+          ? String(r.lastMessageAt)
+          : null,
+    lastSenderId:
+      r.last_sender_id != null
+        ? String(r.last_sender_id)
+        : r.lastSenderId != null
+          ? String(r.lastSenderId)
+          : null,
+    peerName: peerName.trim(),
+    peerImageUrl: peerImg && String(peerImg).trim() ? String(peerImg).trim() : null,
+    unreadCount: (() => {
+      const u = r.unread_count ?? r.unreadCount
+      if (u == null) return 0
+      const n = typeof u === "number" ? u : Number(u)
+      return Number.isFinite(n) && n > 0 ? Math.floor(n) : 0
+    })(),
+  }
+}
+
+/**
+ * @param {string} matchId
+ * @returns {Promise<ChatRoomListDto[]>}
+ */
+async function fetchChatRoomsByMatchSupabase(matchId) {
+  if (!supabase) throw new Error("Supabase is not configured")
+  const mid = String(matchId || "").trim()
+  if (!mid) throw new Error("match_id is required")
+
+  const { data, error } = await supabase
+    .from("chat_rooms")
+    .select("*")
+    .eq("match_id", mid)
+    .order("last_message_at", { ascending: false })
+
+  if (error) throw new Error(error.message)
+  return (data ?? []).map(normalizeChatRoom)
+}
+
+/**
+ * @param {string} chatRoomId
+ * @param {{ last_message_text?: string | null, last_message_type: string, last_message_at: string, last_sender_id: string }} body
+ */
+async function patchChatRoomLastMessageSupabase(chatRoomId, body) {
+  if (!supabase) throw new Error("Supabase is not configured")
+  const { error } = await supabase
+    .from("chat_rooms")
+    .update({
+      last_message_text: body.last_message_text ?? null,
+      last_message_type: body.last_message_type,
+      last_message_at: body.last_message_at,
+      last_sender_id: body.last_sender_id,
+    })
+    .eq("id", chatRoomId)
+
+  if (error) throw new Error(error.message)
+}
+
 export function normalizeMessage(row) {
   if (!row || typeof row !== "object") {
     return {
@@ -157,9 +298,13 @@ export async function fetchChatMessages(chatRoomId, token) {
   if (res.status === 404 && useSupabaseFallback()) {
     return fetchMessagesSupabase(chatRoomId)
   }
+  // First-time entry: allow "no room/messages yet" to render empty state (no loud JSON error).
+  if (res.status === 404) {
+    return []
+  }
   if (!res.ok) {
-    const text = await res.text().catch(() => "")
-    throw new Error(text || `Load messages failed (${res.status})`)
+    const msg = await readApiErrorMessage(res)
+    throw new Error(msg || `Load messages failed (${res.status})`)
   }
   const body = await res.json()
   const list = Array.isArray(body) ? body : body?.messages ?? body?.data ?? []
@@ -177,8 +322,8 @@ export async function fetchChatPeer(chatRoomId, token) {
     headers: { ...authHeaders(token) },
   })
   if (!res.ok) {
-    const text = await res.text().catch(() => "")
-    throw new Error(text || `Load chat peer failed (${res.status})`)
+    const msg = await readApiErrorMessage(res)
+    throw new Error(msg || `Load chat peer failed (${res.status})`)
   }
   return await res.json()
 }
@@ -208,8 +353,8 @@ export async function sendChatMessage(chatRoomId, payload, token, meta = {}) {
     return sendMessageSupabase(chatRoomId, payload, sid)
   }
   if (!res.ok) {
-    const text = await res.text().catch(() => "")
-    throw new Error(text || `Send message failed (${res.status})`)
+    const msg = await readApiErrorMessage(res)
+    throw new Error(msg || `Send message failed (${res.status})`)
   }
   const body = await res.json()
   const row = body?.message ?? body?.data ?? body
@@ -237,8 +382,8 @@ export async function markChatRoomRead(chatRoomId, token, meta = {}) {
     return
   }
   if (!res.ok) {
-    const text = await res.text().catch(() => "")
-    throw new Error(text || `Mark read failed (${res.status})`)
+    const msg = await readApiErrorMessage(res)
+    throw new Error(msg || `Mark read failed (${res.status})`)
   }
 }
 
@@ -247,6 +392,93 @@ export async function markChatRoomRead(chatRoomId, token, meta = {}) {
  * @param {string} token
  * @returns {Promise<{ totalUnread: number }>}
  */
+/**
+ * Chat rooms for the logged-in user for a given match (backend resolves membership via JWT).
+ * Spring contract: `GET /api/chat/matches/{matchId}/rooms` → JSON array or `{ rooms: [...] }`.
+ *
+ * @param {string} matchId
+ * @param {string} token
+ * @returns {Promise<ChatRoomListDto[]>}
+ */
+export async function fetchChatRoomsByMatch(matchId, token) {
+  const mid = String(matchId || "").trim()
+  if (!mid) return []
+
+  const res = await fetch(apiUrl(`/api/chat/matches/${encodeURIComponent(mid)}/rooms`), {
+    headers: { ...authHeaders(token) },
+  })
+  if (res.status === 404 && useSupabaseFallback()) {
+    return fetchChatRoomsByMatchSupabase(mid)
+  }
+  if (!res.ok) {
+    const text = await res.text().catch(() => "")
+    throw new Error(text || `Load chat rooms failed (${res.status})`)
+  }
+  const body = await res.json()
+  const list = Array.isArray(body) ? body : body?.rooms ?? body?.data ?? []
+  return list.map(normalizeChatRoom)
+}
+
+/**
+ * All chat rooms for the logged-in user (any match). Spring: `GET /api/chat/rooms`.
+ * @param {string} token
+ * @returns {Promise<ChatRoomListDto[]>}
+ */
+export async function fetchChatRoomsForUser(token) {
+  const res = await fetch(apiUrl("/api/chat/rooms"), {
+    headers: { ...authHeaders(token) },
+  })
+  if (res.status === 404 && useSupabaseFallback()) {
+    return []
+  }
+  if (!res.ok) {
+    const text = await res.text().catch(() => "")
+    throw new Error(text || `Load chat rooms failed (${res.status})`)
+  }
+  const body = await res.json()
+  const list = Array.isArray(body) ? body : body?.rooms ?? body?.data ?? []
+  return list.map(normalizeChatRoom)
+}
+
+/**
+ * Updates `chat_rooms` last-message snapshot (call after send, or implement only on backend inside POST /messages).
+ * Spring contract: `PATCH /api/chat/rooms/{chatRoomId}/last-message` with JSON body (snake_case).
+ *
+ * @param {string} chatRoomId
+ * @param {{
+ *   lastMessageText?: string | null
+ *   lastMessageType: 'text' | 'image' | string
+ *   lastMessageAt: string
+ *   lastSenderId: string
+ * }} payload
+ * @param {string} token
+ */
+export async function patchChatRoomLastMessage(chatRoomId, token, payload) {
+  const body = {
+    last_message_text: payload.lastMessageText ?? null,
+    last_message_type: payload.lastMessageType,
+    last_message_at: payload.lastMessageAt,
+    last_sender_id: payload.lastSenderId,
+  }
+
+  const res = await fetch(apiUrl(`/api/chat/rooms/${encodeURIComponent(chatRoomId)}/last-message`), {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(token),
+    },
+    body: JSON.stringify(body),
+  })
+  if (res.status === 404 && useSupabaseFallback()) {
+    await patchChatRoomLastMessageSupabase(chatRoomId, body)
+    return
+  }
+  if (!res.ok && res.status !== 204) {
+    const text = await res.text().catch(() => "")
+    throw new Error(text || `Update last message failed (${res.status})`)
+  }
+}
+
 export async function fetchUnreadSummary(token) {
   const res = await fetch(apiUrl("/api/chat/unread-summary"), {
     headers: { ...authHeaders(token) },
@@ -255,8 +487,8 @@ export async function fetchUnreadSummary(token) {
     return { totalUnread: 0 }
   }
   if (!res.ok) {
-    const text = await res.text().catch(() => "")
-    throw new Error(text || `Unread summary failed (${res.status})`)
+    const msg = await readApiErrorMessage(res)
+    throw new Error(msg || `Unread summary failed (${res.status})`)
   }
   const body = await res.json()
   const n = body?.totalUnread ?? body?.total_unread ?? body?.count ?? 0
@@ -284,8 +516,8 @@ export async function uploadChatImage(chatRoomId, file, token) {
     return uploadChatImageSupabase(chatRoomId, file)
   }
   if (!res.ok) {
-    const text = await res.text().catch(() => "")
-    throw new Error(text || `Upload image failed (${res.status})`)
+    const msg = await readApiErrorMessage(res)
+    throw new Error(msg || `Upload image failed (${res.status})`)
   }
   const body = await res.json()
   const imageUrl = body?.image_url ?? body?.imageUrl ?? body?.url

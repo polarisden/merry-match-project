@@ -94,10 +94,12 @@ function removePendingImage() {
 </script>
 
 <template>
-  <div class="w-full shrink-0 border-t border-gray-800 bg-bg py-3">
+  <div
+    class="w-full min-w-0 shrink-0 border-t border-gray-800 bg-bg py-3 px-4 lg:px-15"
+  >
     <div
       v-if="previewUrl && pendingFile"
-      class="mx-3 mb-2 flex items-center gap-3 rounded-xl border border-gray-600 bg-gray-900/80 px-3 py-2 lg:mx-12"
+      class="mb-2 flex items-center gap-3 rounded-xl border border-gray-600 bg-gray-900/80 px-3 py-2"
     >
       <img
         :src="previewUrl"
@@ -121,7 +123,7 @@ function removePendingImage() {
         Cancel
       </button>
     </div>
-    <div class="flex items-center gap-1 px-3 lg:px-12">
+    <div class="flex min-w-0 items-center gap-1">
       <input
         ref="fileRef"
         type="file"

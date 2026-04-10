@@ -19,6 +19,95 @@ import ListWithMatchPageMobile from '@/components/ListWithMatchPageMobile.vue'
 import { ref, computed } from 'vue'
 
 const selectedChat = ref(null)
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { fetchChatRoomsByMatch, fetchChatRoomsForUser } from '@/views/chat/chatApi'
+
+const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
+
+/** @type {import('vue').Ref<string | null>} */
+const selectedChatRoomId = ref(null)
+
+const matchIdForChat = computed(() => {
+  const q = route.query.match_id ?? route.query.matchId
+  if (typeof q === 'string' && q.trim()) return q.trim()
+  const env = import.meta.env.VITE_MOCK_MATCH_ID
+  if (typeof env === 'string' && env.trim()) return env.trim()
+  return ''
+})
+
+const chatRooms = ref([])
+const chatRoomsLoading = ref(false)
+const chatRoomsError = ref('')
+
+async function loadChatRooms() {
+  chatRoomsError.value = ''
+  authStore.hydrate()
+  const t = authStore.token
+  if (!t) {
+    chatRooms.value = []
+    return
+  }
+  const mid = matchIdForChat.value
+  chatRoomsLoading.value = true
+  try {
+    chatRooms.value = mid
+      ? await fetchChatRoomsByMatch(mid, t)
+      : await fetchChatRoomsForUser(t)
+    const openId = selectedChatRoomId.value
+    if (openId) clearUnreadForRoom(openId)
+  } catch (e) {
+    chatRooms.value = []
+    chatRoomsError.value = e instanceof Error ? e.message : 'Failed to load chats'
+  } finally {
+    chatRoomsLoading.value = false
+  }
+}
+
+/** ห้องที่เปิดอยู่ถือว่าอ่านแล้ว — ซ่อน badge ทันที (สอดคล้องกับ mark read ใน ChatRoom) */
+function clearUnreadForRoom(roomId) {
+  const id = String(roomId || '').trim()
+  if (!id) return
+  chatRooms.value = chatRooms.value.map((r) =>
+    r.id === id ? { ...r, unreadCount: 0 } : r,
+  )
+}
+
+function openChatRoom(roomId) {
+  const id = String(roomId || '').trim()
+  if (!id) return
+  selectedChatRoomId.value = id
+  router.replace({ path: route.path, query: { ...route.query, room: id } })
+}
+
+watch(
+  () => route.query.room,
+  (q) => {
+    if (typeof q === 'string' && q.trim()) selectedChatRoomId.value = q.trim()
+    else selectedChatRoomId.value = null
+  },
+  { immediate: true },
+)
+
+watch(matchIdForChat, () => {
+  loadChatRooms()
+})
+
+const unreadChatTotal = computed(() =>
+  chatRooms.value.reduce((n, r) => n + (Number(r.unreadCount) || 0), 0),
+)
+
+watch(selectedChatRoomId, (id, prev) => {
+  if (id) clearUnreadForRoom(id)
+  if (prev && !id) loadChatRooms()
+})
+
+onMounted(() => {
+  loadChatRooms()
+})
 
 const showPreview = ref(false)
 const showMobilePreview = ref(false)
@@ -179,7 +268,7 @@ function onLike() {
   </div>
 
   <!-- desktop -->
-  <div class="hidden lg:flex">
+  <div class="hidden min-h-dvh w-full min-w-0 lg:flex">
     <!-- left container -->
     <section class="h-dvh w-[22%] flex flex-col relative">
       <div class="h-[259px] flex items-center justify-center border-b border-b-gray-300 px-4">
@@ -199,29 +288,59 @@ function onLike() {
         </div>
       </div>
       <div class="flex flex-col px-4 gap-4">
-        <span class="headline4 text-gray-900">Chat with Merry Match</span>
-        <!-- chat message -->
-        <div class="flex flex-col gap-2">
-          <div class="h-[92px] py-4 px-3 flex gap-3 items-center cursor-pointer rounded-[16px] border border-white" :class="selectedChat === 1 ? 'border-purple-500! bg-gray-100' : ''" @click="selectedChat = 1">
-            <img src="@/assets/images/profile1.png" class="size-[60px] object-cover rounded-full"/>
-            <div class="flex flex-col gap-[2px]">
-              <span class="body2 text-gray-900">Name ja</span>
-              <span class="body4 text-gray-700">Hello World!</span>
+        <div class="flex items-center gap-2">
+          <span class="headline4 text-gray-900">Chat with Merry Match</span>
+          <span
+            v-if="unreadChatTotal > 0"
+            class="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-1.5 body5 font-medium text-white tabular-nums"
+            :aria-label="`${unreadChatTotal} unread messages in Merry Match chats`"
+          >
+            {{ unreadChatTotal > 99 ? "99+" : unreadChatTotal }}
+          </span>
+        </div>
+        <p v-if="chatRoomsError" class="body4 text-red-600" role="alert">
+          {{ chatRoomsError }}
+        </p>
+        <p v-else-if="!authStore.token" class="body4 text-gray-500">
+          Log in to see your Merry Match chats.
+        </p>
+        <p v-else-if="chatRoomsLoading" class="body4 text-gray-500">
+          Loading chats…
+        </p>
+        <p v-else-if="chatRooms.length === 0" class="body4 text-gray-500">
+          {{ matchIdForChat ? 'No chat rooms for this match yet.' : 'No chat rooms yet.' }}
+        </p>
+        <div v-else class="flex flex-col gap-2">
+          <div
+            v-for="room in chatRooms"
+            :key="room.id"
+            class="min-h-[92px] py-4 px-3 flex gap-3 items-center cursor-pointer rounded-[16px] border border-white"
+            :class="selectedChatRoomId === room.id ? 'border-purple-500! bg-gray-100' : ''"
+            @click="openChatRoom(room.id)"
+          >
+            <img
+              :src="room.peerImageUrl || profile1Img"
+              :alt="room.peerName ? `Avatar of ${room.peerName}` : 'Chat peer avatar'"
+              class="size-[60px] object-cover rounded-full"
+            >
+            <div class="flex min-w-0 flex-1 flex-col gap-[2px]">
+              <span class="body2 truncate text-gray-900">{{ room.peerName || 'Merry Match' }}</span>
+              <span class="body4 truncate text-gray-700">{{ room.lastMessageText || 'Say hi!' }}</span>
             </div>
-          </div>
-          <div class="h-[92px] py-4 px-3 flex gap-3 items-center cursor-pointer rounded-[16px] border border-white" :class="selectedChat === 2 ? 'border-purple-500! bg-gray-100' : ''" @click="selectedChat = 2">
-            <img src="@/assets/images/profile2.png" class="size-[60px] object-cover rounded-full"/>
-            <div class="flex flex-col gap-[2px]">
-              <span class="body2 text-gray-900">Name ja</span>
-              <span class="body4 text-gray-700">Hello World!</span>
-            </div>
+            <span
+              v-if="(room.unreadCount || 0) > 0"
+              class="inline-flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 body5 font-medium text-white tabular-nums"
+              :aria-label="`${room.unreadCount} unread messages`"
+            >
+              {{ (room.unreadCount || 0) > 99 ? "99+" : room.unreadCount }}
+            </span>
           </div>
         </div>
       </div>
     </section>
 
     <!-- middle container -->
-    <section v-if="selectedChat === null" class="flex h-dvh w-[62%] flex-col bg-bg overflow-hidden">
+    <section v-if="!selectedChatRoomId" class="flex h-dvh w-[62%] flex-col bg-bg overflow-hidden">
       <div class="flex flex-1 items-center justify-center">
         <div class="flex flex-col items-center">
           <!-- card deck -->
@@ -313,10 +432,10 @@ function onLike() {
     </section>
 
     <!-- chat room (replaces middle + right when chat selected) -->
-    <ChatRoomCard v-if="selectedChat !== null" class="flex-1" />
+    <ChatRoomCard v-if="selectedChatRoomId" class="min-w-0 flex-1" />
 
     <!-- right container -->
-    <section v-if="selectedChat === null" class="w-[16%] px-4 pt-6">
+    <section v-if="!selectedChatRoomId" class="w-[16%] px-4 pt-6">
       <div class="flex flex-col gap-4">
         <span class="body2 font-bold! text-gray-900">Gender you interest</span>
         <div class="flex flex-col gap-4 items-start mb-15">
