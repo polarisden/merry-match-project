@@ -16,9 +16,6 @@ import ProfilePreviewCard from '@/components/profile/ProfilePreviewCard.vue'
 import ChatRoomCard from '@/views/chat/ChatRoomPage.vue'
 import ListWithMatchPageMobile from '@/components/ListWithMatchPageMobile.vue'
 
-import { ref, computed } from 'vue'
-
-const selectedChat = ref(null)
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -208,9 +205,14 @@ function onLike() {
 <template>
   <!-- mobile -->
   <div class="bg-bg min-h-dvh flex flex-col relative lg:hidden">
-    <!-- <navbar> -->
-    <!-- <ChatRoomCard /> -->
-    <div class="relative w-[375px]">
+    <ChatRoomCard
+      v-if="selectedChatRoomId"
+      class="min-h-dvh"
+    />
+    <div
+      v-else
+      class="relative w-[375px]"
+    >
       <div class="relative h-[619px] w-[375px] overflow-hidden rounded-b-[24px]">
         <img :src="faceImg" alt="face" class="h-full w-full object-cover" />
         <div
