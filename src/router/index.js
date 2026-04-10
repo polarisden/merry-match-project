@@ -38,7 +38,16 @@ const router = createRouter({
     {
       path: '/chat/:contact?',
       name: 'chat-room',
-      component: () => import('@/views/chat/ChatRoomPage.vue'),
+      redirect: (to) => {
+        const qRoom = typeof to.query.room === 'string' ? to.query.room.trim() : ''
+        const contact = typeof to.params.contact === 'string' ? to.params.contact.trim() : ''
+        const uuidRe =
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        const room = qRoom || (uuidRe.test(contact) ? contact : '')
+        const nextQuery = { ...to.query }
+        if (room) nextQuery.room = room
+        return { path: '/matching', query: nextQuery }
+      },
     },
   ],
 })
