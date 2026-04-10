@@ -5,6 +5,8 @@ import RegisterPage from '@/views/RegisterPage.vue'
 import LoginPage from '@/views/LoginPage.vue'
 import MatchingPage from '@/views/MatchingPage.vue'
 import ApiHealthPage from '@/views/ApiHealthPage.vue'
+import ReportPage from '@/views/ReportPage.vue'
+import AdminSideBar from '@/views/admin/AdminSideBar.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -29,6 +31,32 @@ const router = createRouter({
       ]
     },
     { path: '/Login', component: LoginPage },
+    { path: '/report', component: ReportPage },
+    {
+      path: '/admin',
+      component: AdminSideBar,
+      children: [
+        {
+          path: '',
+          redirect: '/admin/complaints',
+        },
+        {
+          path: 'packages',
+          name: 'admin-packages',
+          component: () => import('@/views/admin/AdminMerryPackage.vue'),
+        },
+        {
+          path: 'complaints',
+          name: 'admin-complaints',
+          component: () => import('@/views/admin/AdminComplaintListPage.vue'),
+        },
+        {
+          path: 'complaints/:id',
+          name: 'admin-complaints-detail',
+          component: () => import('@/views/admin/AdminComplaintDetailPage.vue'),
+        },
+      ],
+    },
     { path: '/matching', component: MatchingPage },
     {
       path: '/matching/messages',
