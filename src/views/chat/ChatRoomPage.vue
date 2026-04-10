@@ -68,18 +68,8 @@ function messageSpacingClass(index) {
 
 <template>
   <div class="min-h-dvh bg-bg">
-    <!-- Reserve space for future navbar on lg+ -->
-    <div
-      class="hidden lg:block h-16 border-b border-gray-200 bg-bg-main"
-      aria-hidden="true"
-    />
-
     <div class="min-h-dvh lg:min-h-[calc(100dvh-4rem)] lg:grid lg:grid-cols-[316px_1fr]">
       <!-- Reserve space for future sidebar on lg+ -->
-      <aside
-        class="hidden lg:block border-r border-gray-200 bg-bg-main"
-        aria-hidden="true"
-      />
 
       <!-- Chat column -->
       <div class="flex w-full max-w-md flex-col mx-auto lg:mx-0 lg:max-w-none">

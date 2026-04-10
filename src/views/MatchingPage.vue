@@ -13,7 +13,10 @@ import mathNsearchLogo from '@/assets/icons/vector.svg'
 import merryMatchLogo from '@/assets/icons/merry_match.svg'
 import ProfilePreviewPopUp from '@/components/modals/ProfilePreviewPopUp.vue'
 import ProfilePreviewCard from '@/components/profile/ProfilePreviewCard.vue'
+import ChatRoomCard from '@/views/chat/ChatRoomPage.vue'
 import { ref, computed } from 'vue'
+
+const selectedChat = ref(null)
 
 const showPreview = ref(false)
 const showMobilePreview = ref(false)
@@ -56,11 +59,39 @@ function onMaxInput(e) {
   maxAge.value = Math.max(val, minAge.value + 1)
 }
 
+// Merry Match list
+const merryMatches = ref([
+  { id: 1, img: profile1Img, name: 'Name ja' },
+  { id: 2, img: profile2Img, name: 'Name ja' },
+  { id: 3, img: faceImg, name: 'Name ja' },
+  { id: 4, img: profile1Img, name: 'Name ja' },
+  { id: 5, img: profile1Img, name: 'Name ja' },
+  { id: 6, img: profile2Img, name: 'Name ja' },
+  { id: 7, img: faceImg, name: 'Name ja' },
+  { id: 8, img: profile1Img, name: 'Name ja' },
+  { id: 9, img: profile1Img, name: 'Name ja' },
+  { id: 10, img: profile2Img, name: 'Name ja' },
+  { id: 11, img: faceImg, name: 'Name ja' },
+  { id: 12, img: profile1Img, name: 'Name ja' },
+])
+
 // Card deck
 const profiles = ref([
   { id: 1, name: 'Daeny', age: 24, location: 'Bangkok, Thailand', img: faceImg },
   { id: 2, name: 'Aria', age: 22, location: 'Chiang Mai, Thailand', img: profile1Img },
   { id: 3, name: 'Yara', age: 26, location: 'Phuket, Thailand', img: profile2Img },
+  { id: 4, name: 'Yaraa', age: 26, location: 'Phuket, Thailand', img: profile2Img },
+  { id: 5, name: 'Yara', age: 26, location: 'Phuket, Thailand', img: profile2Img },
+  { id: 6, name: 'Daeny', age: 24, location: 'Bangkok, Thailand', img: faceImg },
+  { id: 7, name: 'Aria', age: 22, location: 'Chiang Mai, Thailand', img: profile1Img },
+  { id: 8, name: 'Yara', age: 26, location: 'Phuket, Thailand', img: profile2Img },
+  { id: 9, name: 'Yara', age: 26, location: 'Phuket, Thailand', img: profile2Img },
+  { id: 10, name: 'Yara', age: 26, location: 'Phuket, Thailand', img: profile2Img },
+  { id: 11, name: 'Daeny', age: 24, location: 'Bangkok, Thailand', img: faceImg },
+  { id: 12, name: 'Aria', age: 22, location: 'Chiang Mai, Thailand', img: profile1Img },
+  { id: 13, name: 'Yara', age: 26, location: 'Phuket, Thailand', img: profile2Img },
+  { id: 14, name: 'Yara', age: 26, location: 'Phuket, Thailand', img: profile2Img },
+  { id: 15, name: 'Yara', age: 26, location: 'Phuket, Thailand', img: profile2Img },
 ])
 const currentIndex = ref(0)
 
@@ -87,6 +118,7 @@ function onLike() {
   <!-- mobile -->
   <div class="bg-bg min-h-dvh flex flex-col relative lg:hidden">
     <!-- <navbar> -->
+    <ChatRoomCard />
     <div class="relative w-[375px]">
       <div class="relative h-[619px] w-[375px] overflow-hidden rounded-b-[24px]">
         <img :src="faceImg" alt="face" class="h-full w-full object-cover" />
@@ -147,7 +179,7 @@ function onLike() {
   <!-- desktop -->
   <div class="hidden lg:flex">
     <!-- left container -->
-    <section class="h-dvh w-[22%] flex flex-col">
+    <section class="h-dvh w-[22%] flex flex-col relative">
       <div class="h-[259px] flex items-center justify-center border-b border-b-gray-300 px-4">
         <div class="flex flex-col items-center gap-1 p-6 border border-purple-500 rounded-[16px] bg-gray-100">
           <mathNsearchLogo class="w-[62px] h-[59px]"/>
@@ -157,31 +189,37 @@ function onLike() {
       </div>
       <div class="px-4 py-6 flex flex-col gap-4 h-[194px]">
         <span class="headline4 text-gray-900">Merry Match!</span>
-        <div class="flex gap-[12px]">
-          <div class="relative">
-            <img src="@/assets/images/profile1.png" class="size-[100px] object-cover rounded-[24px]">
+        <div class="flex gap-[12px] overflow-x-auto scrollbar-hide">
+          <div v-for="match in merryMatches" :key="match.id" class="relative shrink-0">
+            <img :src="match.img" class="size-[100px] object-cover rounded-[24px]">
             <merryMatchLogo class="text-red-400 absolute right-0 bottom-0 w-[34px] h-5 stroke-4"/>
           </div>
-          <div class="relative">
-            <img src="@/assets/images/profile2.png" class="size-[100px] object-cover rounded-[24px]">
-            <merryMatchLogo class="text-red-400 absolute right-0 bottom-0 w-[34px] h-5 stroke-4"/>
-          </div>
-        </div>  
+        </div>
       </div>
       <div class="flex flex-col px-4 gap-4">
         <span class="headline4 text-gray-900">Chat with Merry Match</span>
-        <div class="h-[92px] py-4 px-3 flex gap-3 items-center">
-          <img src="@/assets/images/profile1.png" class="size-[60px] object-cover rounded-full"/>
-          <div class="flex flex-col gap-[2px]">
-            <span class="body2 text-gray-900">Name ja</span>
-            <span class="body4 text-gray-700">Hello World!</span>
+        <!-- chat message -->
+        <div class="flex flex-col gap-2">
+          <div class="h-[92px] py-4 px-3 flex gap-3 items-center cursor-pointer rounded-[16px] border border-white" :class="selectedChat === 1 ? 'border-purple-500! bg-gray-100' : ''" @click="selectedChat = 1">
+            <img src="@/assets/images/profile1.png" class="size-[60px] object-cover rounded-full"/>
+            <div class="flex flex-col gap-[2px]">
+              <span class="body2 text-gray-900">Name ja</span>
+              <span class="body4 text-gray-700">Hello World!</span>
+            </div>
+          </div>
+          <div class="h-[92px] py-4 px-3 flex gap-3 items-center cursor-pointer rounded-[16px] border border-white" :class="selectedChat === 2 ? 'border-purple-500! bg-gray-100' : ''" @click="selectedChat = 2">
+            <img src="@/assets/images/profile2.png" class="size-[60px] object-cover rounded-full"/>
+            <div class="flex flex-col gap-[2px]">
+              <span class="body2 text-gray-900">Name ja</span>
+              <span class="body4 text-gray-700">Hello World!</span>
+            </div>
           </div>
         </div>
       </div>
     </section>
-    
+
     <!-- middle container -->
-    <section class="flex h-dvh w-[62%] flex-col bg-bg overflow-hidden">
+    <section v-if="selectedChat === null" class="flex h-dvh w-[62%] flex-col bg-bg overflow-hidden">
       <div class="flex flex-1 items-center justify-center">
         <div class="flex flex-col items-center">
           <!-- card deck -->
@@ -272,8 +310,11 @@ function onLike() {
       </div>
     </section>
 
+    <!-- chat room (replaces middle + right when chat selected) -->
+    <ChatRoomCard v-if="selectedChat !== null" class="flex-1" />
+
     <!-- right container -->
-    <section class="w-[16%] px-4 pt-6">
+    <section v-if="selectedChat === null" class="w-[16%] px-4 pt-6">
       <div class="flex flex-col gap-4">
         <span class="body2 font-bold! text-gray-900">Gender you interest</span>
         <div class="flex flex-col gap-4 items-start mb-15">

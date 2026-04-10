@@ -68,6 +68,12 @@
 }
 
 @layer utilities {
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    &::-webkit-scrollbar { display: none; }
+  }
+
   .bg-linear {
     background: linear-gradient(to right, #742138, #A878BF);
   }
