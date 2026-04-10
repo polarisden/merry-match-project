@@ -31,6 +31,11 @@ const router = createRouter({
     { path: '/Login', component: LoginPage },
     { path: '/matching', component: MatchingPage },
     {
+      path: '/matching/messages',
+      name: 'matching-messages',
+      component: () => import('@/components/ListWithMatchPageMobile.vue'),
+    },
+    {
       path: '/chat/:contact?',
       name: 'chat-room',
       component: () => import('@/views/chat/ChatRoomPage.vue'),

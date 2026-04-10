@@ -14,6 +14,8 @@ import merryMatchLogo from '@/assets/icons/merry_match.svg'
 import ProfilePreviewPopUp from '@/components/modals/ProfilePreviewPopUp.vue'
 import ProfilePreviewCard from '@/components/profile/ProfilePreviewCard.vue'
 import ChatRoomCard from '@/views/chat/ChatRoomPage.vue'
+import ListWithMatchPageMobile from '@/components/ListWithMatchPageMobile.vue'
+
 import { ref, computed } from 'vue'
 
 const selectedChat = ref(null)
@@ -118,7 +120,7 @@ function onLike() {
   <!-- mobile -->
   <div class="bg-bg min-h-dvh flex flex-col relative lg:hidden">
     <!-- <navbar> -->
-    <ChatRoomCard />
+    <!-- <ChatRoomCard /> -->
     <div class="relative w-[375px]">
       <div class="relative h-[619px] w-[375px] overflow-hidden rounded-b-[24px]">
         <img :src="faceImg" alt="face" class="h-full w-full object-cover" />
