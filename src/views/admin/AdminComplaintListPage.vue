@@ -1,9 +1,12 @@
 <script setup>
-import { computed, onUnmounted, ref } from "vue"
+import { computed, onMounted, onUnmounted, ref } from "vue"
 import { useRouter } from "vue-router"
+import { useAuthStore } from "@/stores/auth"
+import { fetchAdminComplaints } from "@/views/admin/reportApi"
 import BaseStatusTag from "@/components/base/BaseStatusTag.vue"
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const search = ref("")
 const status = ref("all") // all | new | pending | resolved | cancel
@@ -21,48 +24,26 @@ const selectedStatusLabel = computed(() => {
   return statusOptions.find((o) => o.value === status.value)?.label ?? "All status"
 })
 
-const rows = ref([
-  {
-    id: "1",
-    user: "Jon Snow",
-    issue: "I was insulted by Ygritte",
-    description: "Hello, there was a problem with user 'Ygritte' who insult me. Can you check her out?",
-    dateSubmitted: "12/02/2022",
-    status: "new",
-  },
-  {
-    id: "2",
-    user: "Jon Snow",
-    issue: "I was insulted by Ygritte",
-    description: "Hello, there was a problem with user 'Ygritte' who insult me. Can you check her out?",
-    dateSubmitted: "12/02/2022",
-    status: "new",
-  },
-  {
-    id: "3",
-    user: "Jon Snow",
-    issue: "I was insulted by Ygritte",
-    description: "Hello, there was a problem with user 'Ygritte' who insult me. Can you check her out?",
-    dateSubmitted: "12/02/2022",
-    status: "pending",
-  },
-  {
-    id: "4",
-    user: "Jon Snow",
-    issue: "I was insulted by Ygritte",
-    description: "Hello, there was a problem with user 'Ygritte' who insult me. Can you check her out?",
-    dateSubmitted: "12/02/2022",
-    status: "resolved",
-  },
-  {
-    id: "5",
-    user: "Jon Snow",
-    issue: "I was insulted by Ygritte",
-    description: "Hello, there was a problem with user 'Ygritte' who insult me. Can you check her out?",
-    dateSubmitted: "12/02/2022",
-    status: "cancel",
-  },
-])
+/** @type {import("vue").Ref<import("./reportApi").ReportItem[]>} */
+const rows = ref([])
+const loading = ref(false)
+const errorMsg = ref("")
+
+async function loadComplaints() {
+  loading.value = true
+  errorMsg.value = ""
+  try {
+    authStore.hydrate()
+    const token = authStore.token
+    rows.value = await fetchAdminComplaints(token)
+  } catch (e) {
+    errorMsg.value = e instanceof Error ? e.message : "Failed to load complaints"
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadComplaints)
 
 const filtered = computed(() => {
   const s = search.value.trim().toLowerCase()
@@ -71,9 +52,9 @@ const filtered = computed(() => {
     if (!matchesStatus) return false
     if (!s) return true
     return (
-      r.user.toLowerCase().includes(s) ||
-      r.issue.toLowerCase().includes(s) ||
-      r.description.toLowerCase().includes(s)
+      (r.reporterName ?? "").toLowerCase().includes(s) ||
+      (r.issue ?? "").toLowerCase().includes(s) ||
+      (r.description ?? "").toLowerCase().includes(s)
     )
   })
 })
@@ -87,6 +68,15 @@ function statusLabel(v) {
   if (v === "pending") return "Pending"
   if (v === "resolved") return "Resolved"
   return "Cancel"
+}
+
+function formatDate(iso) {
+  if (!iso) return "-"
+  try {
+    return new Date(iso).toLocaleDateString("en-GB")
+  } catch {
+    return iso
+  }
 }
 
 function toggleStatusDropdown() {
@@ -121,68 +111,98 @@ onUnmounted(() => {
     <!-- Top navbar -->
     <div class="bg-white border-b border-gray-100">
       <div class="flex items-center justify-between gap-4 px-10 py-4 h-20">
-      <h1 class="headline4 text-gray-900">
-        Complaint list
-      </h1>
+        <h1 class="headline4 text-gray-900">
+          Complaint list
+        </h1>
 
-      <div class="flex justify-between gap-3 w-[536px]">
-        <div class="relative">
-          <input
-            v-model="search"
-            type="text"
-            placeholder="Search..."
-            class="h-12 w-[320px] rounded-lg border border-gray-200 bg-white px-9 text-[13px] text-gray-900 placeholder:text-gray-400 outline-none focus:border-purple-300 focus:ring-2 focus:ring-purple-100"
-          />
-          <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-            ⌕
-          </span>
-        </div>
-
-        <div
-          class="relative w-[200px]"
-          data-status-dropdown
-        >
-          <button
-            type="button"
-            class="h-12 w-full rounded-xl border border-gray-200 bg-white px-4 body2 outline-none flex items-center justify-between hover:cursor-pointer"
-            aria-label="Filter by status"
-            @click.stop="toggleStatusDropdown"
-          >
-            <span class="truncate text-left text-gray-700">
-              {{ selectedStatusLabel }}
+        <div class="flex justify-between gap-3 w-[536px]">
+          <div class="relative">
+            <input
+              v-model="search"
+              type="text"
+              placeholder="Search..."
+              class="h-12 w-[320px] rounded-lg border border-gray-200 bg-white px-9 text-[13px] text-gray-900 placeholder:text-gray-400 outline-none focus:border-purple-300 focus:ring-2 focus:ring-purple-100"
+            />
+            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+              ⌕
             </span>
-            <span
-              class="text-[10px] text-gray-500 transition-transform"
-              :class="{ 'rotate-180': openStatusDropdown }"
-              aria-hidden="true"
-            >
-              ▼
-            </span>
-          </button>
+          </div>
 
           <div
-            v-if="openStatusDropdown"
-            class="absolute z-30 mt-2 w-full rounded-xl border border-gray-200 bg-white shadow-sm p-2 max-h-56 overflow-y-auto"
-            role="listbox"
-            aria-label="Status options"
+            class="relative w-[200px]"
+            data-status-dropdown
           >
             <button
-              v-for="opt in statusOptions"
-              :key="opt.value"
               type="button"
-              class="w-full rounded-md px-3 py-2.5 text-left body2 text-gray-700 hover:bg-gray-100 hover:cursor-pointer"
-              @click="selectStatus(opt.value)"
+              class="h-12 w-full rounded-xl border border-gray-200 bg-white px-4 body2 outline-none flex items-center justify-between hover:cursor-pointer"
+              aria-label="Filter by status"
+              @click.stop="toggleStatusDropdown"
             >
-              {{ opt.label }}
+              <span class="truncate text-left text-gray-700">
+                {{ selectedStatusLabel }}
+              </span>
+              <span
+                class="text-[10px] text-gray-500 transition-transform"
+                :class="{ 'rotate-180': openStatusDropdown }"
+                aria-hidden="true"
+              >
+                ▼
+              </span>
             </button>
+
+            <div
+              v-if="openStatusDropdown"
+              class="absolute z-30 mt-2 w-full rounded-xl border border-gray-200 bg-white shadow-sm p-2 max-h-56 overflow-y-auto"
+              role="listbox"
+              aria-label="Status options"
+            >
+              <button
+                v-for="opt in statusOptions"
+                :key="opt.value"
+                type="button"
+                class="w-full rounded-md px-3 py-2.5 text-left body2 text-gray-700 hover:bg-gray-100 hover:cursor-pointer"
+                @click="selectStatus(opt.value)"
+              >
+                {{ opt.label }}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
 
     <div class="px-10 py-10">
-      <div class="overflow-hidden rounded-xl bg-white shadow-sm">
+      <!-- Loading state -->
+      <p
+        v-if="loading"
+        class="body2 text-gray-500"
+        role="status"
+      >
+        Loading...
+      </p>
+
+      <!-- Error state -->
+      <p
+        v-else-if="errorMsg"
+        class="body2 text-red-600"
+        role="alert"
+      >
+        {{ errorMsg }}
+      </p>
+
+      <!-- Empty state -->
+      <p
+        v-else-if="rows.length === 0"
+        class="body2 text-gray-400"
+      >
+        No complaints yet.
+      </p>
+
+      <!-- Table -->
+      <div
+        v-else
+        class="overflow-hidden rounded-xl bg-white shadow-sm"
+      >
         <div class="h-10 align-center grid grid-cols-[140px_220px_1fr_160px_120px] gap-0 bg-gray-400 px-10 py-2 body4 text-gray-800">
           <div>User</div>
           <div>Issue</div>
@@ -200,7 +220,7 @@ onUnmounted(() => {
             @click="goDetail(r.id)"
           >
             <div class="truncate body2 text-black">
-              {{ r.user }}
+              {{ r.reporterName }}
             </div>
             <div class="truncate body2 text-black">
               {{ r.issue }}
@@ -209,7 +229,7 @@ onUnmounted(() => {
               {{ r.description }}
             </div>
             <div class="text-center body2 text-black">
-              {{ r.dateSubmitted }}
+              {{ formatDate(r.createdAt) }}
             </div>
             <div class="flex pl-10">
               <BaseStatusTag :variant="r.status">
@@ -222,4 +242,3 @@ onUnmounted(() => {
     </div>
   </section>
 </template>
-

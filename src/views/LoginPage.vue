@@ -1,9 +1,20 @@
 <script setup>
 import { ref } from "vue"
-import { useRouter } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
 import { apiUrl } from "@/lib/apiBase"
+import { useAuthStore } from "@/stores/auth"
 
 const router = useRouter()
+const route = useRoute()
+const authStore = useAuthStore()
+
+/** Internal path only (avoid open redirects). */
+function safeInternalRedirect(raw) {
+  if (typeof raw !== "string") return ""
+  const t = raw.trim()
+  if (!t.startsWith("/") || t.startsWith("//")) return ""
+  return t
+}
 
 const loginImage = new URL("../assets/icons/image_login.svg", import.meta.url).href
 const ellipse2Icon = new URL("../assets/icons/Ellipse2.svg", import.meta.url).href
@@ -64,10 +75,11 @@ async function submitLogin() {
         body.data?.access_token
 
       if (token && typeof token === "string") {
-        localStorage.setItem("token", token)
+        authStore.setToken(token)
       }
     }
-    router.push("/")
+    const next = safeInternalRedirect(typeof route.query.redirect === "string" ? route.query.redirect : "")
+    router.push(next || "/")
   } catch (e) {
     loginError.value = e instanceof Error ? e.message : "Login failed"
   } finally {

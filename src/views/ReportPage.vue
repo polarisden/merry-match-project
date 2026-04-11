@@ -1,12 +1,10 @@
 <script setup>
 import { computed, ref } from "vue"
-import { apiUrl } from "@/lib/apiBase"
 import { useAuthStore } from "@/stores/auth"
 import BaseButtonPrimary from "@/components/base/BaseButtonPrimary.vue"
+import { submitUserReport } from "@/views/admin/reportApi"
 
 const reportImage = new URL("../assets/icons/image_login.svg", import.meta.url).href
-const ellipse2Icon = new URL("../assets/icons/Ellipse2.svg", import.meta.url).href
-const ellipse3Icon = new URL("../assets/icons/Ellipse3.svg", import.meta.url).href
 
 const authStore = useAuthStore()
 
@@ -17,8 +15,6 @@ const errorMsg = ref("")
 const successMsg = ref("")
 
 const canSubmit = computed(() => issue.value.trim().length > 0 && description.value.trim().length > 0 && !sending.value)
-
-const REPORT_ENDPOINT = apiUrl("/api/reports")
 
 async function submitReport() {
   errorMsg.value = ""
@@ -36,30 +32,11 @@ async function submitReport() {
   sending.value = true
   try {
     authStore.hydrate()
-    const res = await fetch(REPORT_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...authStore.getAuthHeader(),
-      },
-      body: JSON.stringify({
-        issue: issue.value.trim(),
-        description: description.value.trim(),
-      }),
-    })
-
-    const ct = res.headers.get("content-type") ?? ""
-    const body = ct.includes("application/json") ? await res.json().catch(() => null) : await res.text().catch(() => "")
-
-    if (!res.ok) {
-      const msg =
-        typeof body === "string"
-          ? body
-          : body?.message ?? body?.error ?? body?.status ?? `Submit failed (${res.status})`
-      errorMsg.value = String(msg || "Submit failed")
-      return
-    }
-
+    const token = authStore.token
+    await submitUserReport(
+      { issue: issue.value.trim(), description: description.value.trim() },
+      token,
+    )
     issue.value = ""
     description.value = ""
     successMsg.value = "Submitted. Thank you for the report."
