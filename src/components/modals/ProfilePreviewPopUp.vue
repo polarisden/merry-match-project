@@ -10,6 +10,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  targetUserId: {
+    type: String,
+    default: "",
+  },
+  fallbackPhotoUrl: {
+    type: String,
+    default: "",
+  },
 })
 
 const emit = defineEmits(["close"])
@@ -33,10 +41,15 @@ const {
 } = useProfilePreviewData()
 
 watch(
-  () => props.open,
-  (isOpen) => {
-    if (isOpen) loadPreview()
+  () => [props.open, props.targetUserId, props.fallbackPhotoUrl],
+  ([isOpen]) => {
+    if (!isOpen) return
+    loadPreview({
+      userId: props.targetUserId,
+      fallbackPhotoUrl: props.fallbackPhotoUrl,
+    })
   },
+  { immediate: true },
 )
 </script>
 

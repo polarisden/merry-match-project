@@ -1,5 +1,10 @@
 import { computed, ref, watch } from "vue"
-import { getMyProfile, listMyProfileImages } from "@/views/profile/profileApi"
+import {
+  getMyProfile,
+  getUserProfileById,
+  listMyProfileImages,
+  listUserProfileImages,
+} from "@/views/profile/profileApi"
 import { sortProfileImagesForDisplay } from "@/components/profile/utils/profileImageOrder"
 
 function ageFromIsoDate(iso) {
@@ -110,7 +115,7 @@ export function useProfilePreviewData() {
     }
   })
 
-  async function loadPreview() {
+  async function loadPreview(options = {}) {
     loading.value = true
     loadError.value = ""
     const token = localStorage.getItem("token") ?? ""
@@ -122,13 +127,33 @@ export function useProfilePreviewData() {
       return
     }
     try {
-      const [p, rawImages] = await Promise.all([
-        getMyProfile(token),
-        listMyProfileImages(token).catch(() => []),
-      ])
+      const targetUserId =
+        options && options.userId != null ? String(options.userId).trim() : ""
+      const fallbackPhotoUrl =
+        options && typeof options.fallbackPhotoUrl === "string" ? options.fallbackPhotoUrl.trim() : ""
+
+      let p
+      let rawImages = []
+      if (targetUserId) {
+        ;[p, rawImages] = await Promise.all([
+          getUserProfileById(targetUserId, token),
+          listUserProfileImages(targetUserId, token).catch(() => []),
+        ])
+      } else {
+        ;[p, rawImages] = await Promise.all([
+          getMyProfile(token),
+          listMyProfileImages(token).catch(() => []),
+        ])
+      }
       profile.value = p
-      const sorted = sortProfileImagesForDisplay(Array.isArray(rawImages) ? rawImages : [])
-      photoUrls.value = sorted.map((img) => img?.imageUrl).filter(Boolean)
+      if (targetUserId) {
+        const sorted = sortProfileImagesForDisplay(Array.isArray(rawImages) ? rawImages : [])
+        const urls = sorted.map((img) => img?.imageUrl).filter(Boolean)
+        photoUrls.value = urls.length > 0 ? urls : fallbackPhotoUrl ? [fallbackPhotoUrl] : []
+      } else {
+        const sorted = sortProfileImagesForDisplay(Array.isArray(rawImages) ? rawImages : [])
+        photoUrls.value = sorted.map((img) => img?.imageUrl).filter(Boolean)
+      }
       currentPhotoIndex.value = 0
     } catch (e) {
       loadError.value = e instanceof Error ? e.message : "Failed to load profile"
