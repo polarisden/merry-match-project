@@ -59,6 +59,11 @@ const router = createRouter({
     },
     { path: '/matching', component: MatchingPage },
     {
+      path: '/merry-list',
+      name: 'merry-list',
+      component: () => import('@/views/MerryList.vue'),
+    },
+    {
       path: '/matching/messages',
       name: 'matching-messages',
       component: () => import('@/components/ListWithMatchPageMobile.vue'),

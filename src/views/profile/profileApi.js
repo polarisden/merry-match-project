@@ -17,6 +17,19 @@ export async function getMyProfile(token) {
   return await res.json()
 }
 
+export async function getUserProfileById(userId, token) {
+  const id = String(userId || "").trim()
+  if (!id) throw new Error("Missing user id")
+  const res = await fetch(apiUrl(`/api/users/${encodeURIComponent(id)}/profile`), {
+    headers: { ...authHeaders(token) },
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => "")
+    throw new Error(text || `Load profile failed (${res.status})`)
+  }
+  return await res.json()
+}
+
 export async function updateMyProfile(payload, token) {
   const res = await fetch(apiUrl(`/api/users/me/profile`), {
     method: 'PUT',
@@ -56,6 +69,20 @@ export async function uploadMyProfileImage(file, { token, isPrimary = false } = 
 
 export async function listMyProfileImages(token) {
   const res = await fetch(apiUrl('/api/users/me/profile-images'), {
+    headers: { ...authHeaders(token) },
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(text || `Load profile images failed (${res.status})`)
+  }
+  const body = await res.json()
+  return Array.isArray(body) ? body : []
+}
+
+export async function listUserProfileImages(userId, token) {
+  const id = String(userId || '').trim()
+  if (!id) throw new Error('Missing user id')
+  const res = await fetch(apiUrl(`/api/users/${encodeURIComponent(id)}/profile-images`), {
     headers: { ...authHeaders(token) },
   })
   if (!res.ok) {

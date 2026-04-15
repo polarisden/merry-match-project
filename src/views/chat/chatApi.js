@@ -441,6 +441,27 @@ export async function fetchChatRoomsForUser(token) {
 }
 
 /**
+ * Open existing chat room with peer or create one when missing.
+ * @param {string} peerUserId
+ * @param {string} token
+ * @returns {Promise<ChatRoomListDto>}
+ */
+export async function openOrCreateChatRoomWithPeer(peerUserId, token) {
+  const pid = String(peerUserId || "").trim()
+  if (!pid) throw new Error("peer user id is required")
+  const res = await fetch(apiUrl(`/api/chat/with/${encodeURIComponent(pid)}/room`), {
+    method: "POST",
+    headers: { ...authHeaders(token) },
+  })
+  if (!res.ok) {
+    const msg = await readApiErrorMessage(res)
+    throw new Error(msg || `Open chat room failed (${res.status})`)
+  }
+  const body = await res.json()
+  return normalizeChatRoom(body)
+}
+
+/**
  * Updates `chat_rooms` last-message snapshot (call after send, or implement only on backend inside POST /messages).
  * Spring contract: `PATCH /api/chat/rooms/{chatRoomId}/last-message` with JSON body (snake_case).
  *

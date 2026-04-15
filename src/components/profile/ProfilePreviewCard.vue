@@ -1,10 +1,22 @@
 <script setup>
-import { onMounted } from "vue"
+import { watch } from "vue"
 import { useRouter } from "vue-router"
 import ArrowIcon from '@/assets/icons/arrow.svg?component'
 import LocationIcon from '@/assets/icons/location.svg?component'
 import { useProfilePreviewData } from '@/components/profile/composables/useProfilePreviewData'
 
+const props = defineProps({
+  targetUserId: {
+    type: String,
+    default: "",
+  },
+  fallbackPhotoUrl: {
+    type: String,
+    default: "",
+  },
+})
+
+const emit = defineEmits(["close"])
 const router = useRouter()
 
 const {
@@ -25,13 +37,24 @@ const {
   showNextPhoto,
 } = useProfilePreviewData()
 
-function goToEditProfile() {
+function goBack() {
+  if (props.targetUserId) {
+    emit("close")
+    return
+  }
   router.push({ name: "edit-profile" })
 }
 
-onMounted(() => {
-  loadPreview()
-})
+watch(
+  () => [props.targetUserId, props.fallbackPhotoUrl],
+  () => {
+    loadPreview({
+      userId: props.targetUserId,
+      fallbackPhotoUrl: props.fallbackPhotoUrl,
+    })
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -74,7 +97,7 @@ onMounted(() => {
             type="button"
             class="absolute top-4 left-4 flex size-9 cursor-pointer items-center justify-center  text-white"
             aria-label="Back"
-            @click="goToEditProfile"
+            @click="goBack"
           >
             <ArrowIcon class="size-4" aria-hidden="true" />
           </button>

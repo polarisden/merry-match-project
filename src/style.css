@@ -112,7 +112,23 @@
     letter-spacing: -1%;
     font-variant-numeric: lining-nums proportional-nums;
   }
+  .merry-list-title {
+    font-family: "Nunito", sans-serif;
+    font-weight: 700;
+    font-size: 32px;
+    line-height: 40px;
+    letter-spacing: -1%;
+    font-variant-numeric: lining-nums proportional-nums;
+  }
   @media (min-width: 1024px) {
+    .merry-list-title {
+      font-weight: 800;
+      font-size: 46px;
+      line-height: 125%;
+      letter-spacing: -2%;
+      font-variant-numeric: normal;
+    }
+
     .register-hero-title {
       font-weight: 800;
       font-size: 46px;
