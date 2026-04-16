@@ -22,6 +22,8 @@ const ellipse3Icon = new URL("../assets/icons/Ellipse3.svg", import.meta.url).hr
 
 const email = ref("")
 const password = ref("")
+const emailError = ref("")
+const passwordError = ref("")
 
 const loginLoading = ref(false)
 const loginError = ref("")
@@ -31,16 +33,36 @@ const LOGIN_ENDPOINT = apiUrl("/api/auth/login")
 
 async function submitLogin() {
   loginError.value = ""
+  emailError.value = ""
+  passwordError.value = ""
 
-  if (!email.value) return (loginError.value = "Please enter your email.")
-  if (!password.value) return (loginError.value = "Please enter your password.")
+  const emailValue = String(email.value ?? "").trim().toLowerCase()
+  const passwordValue = String(password.value ?? "")
+
+  if (!emailValue) {
+    emailError.value = "Please enter your email."
+    return
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(emailValue)) {
+    emailError.value = "Please enter a valid email address."
+    return
+  }
+  if (!passwordValue.trim()) {
+    passwordError.value = "Please enter your password."
+    return
+  }
+  if (passwordValue.length < 6) {
+    passwordError.value = "Password must be at least 8 characters."
+    return
+  }
 
   try {
     loginLoading.value = true
 
     const payload = {
-      email: email.value.trim().toLowerCase(),
-      password: password.value,
+      email: emailValue,
+      password: passwordValue,
     }
 
     const res = await fetch(LOGIN_ENDPOINT, {
@@ -53,13 +75,23 @@ async function submitLogin() {
     const body = contentType.includes("application/json") ? await res.json() : await res.text()
 
     if (!res.ok) {
+      const credentialErrorMessage = "Incorrect email or password."
       if (typeof body === "string") {
-        loginError.value = body
+        const normalized = body.toLowerCase()
+        if (res.status === 400 || res.status === 401 || normalized.includes("invalid login credentials")) {
+          loginError.value = credentialErrorMessage
+        } else {
+          loginError.value = body
+        }
       } else {
-        loginError.value =
+        const rawMessage =
           body?.message ?? body?.error ?? body?.status ?? `Login failed with status ${res.status}`
-        // If backend only returns {error:"Bad Request"}, show raw JSON too.
-        loginError.value = `${loginError.value}`
+        const normalized = String(rawMessage).toLowerCase()
+        if (res.status === 400 || res.status === 401 || normalized.includes("invalid login credentials")) {
+          loginError.value = credentialErrorMessage
+        } else {
+          loginError.value = `${rawMessage}`
+        }
       }
       return
     }
@@ -126,8 +158,17 @@ async function submitLogin() {
   
           <form
             class="mt-8 space-y-6"
+            novalidate
             @submit.prevent="submitLogin"
           >
+            <p
+              v-if="loginError"
+              class="rounded-lg border border-red-200 bg-red-100 px-3 py-2 body2 text-red-700"
+              role="alert"
+            >
+              {{ loginError }}
+            </p>
+
             <div>
               <label
                 for="email"
@@ -137,11 +178,15 @@ async function submitLogin() {
               </label>
               <input
                 id="email"
-                type="text"
+                type="email"
                 placeholder="Enter email"
                 class="mt-2 w-full h-11 rounded-lg border body2 border-gray-400 bg-gray-200 px-3 text-[18px] text-gray-900 placeholder:text-gray-500 outline-none focus:border-purple-300 focus:ring-2 focus:ring-purple-200"
                 v-model="email"
+                autocomplete="email"
               />
+              <p v-if="emailError" class="mt-2 text-red-500 text-sm">
+                {{ emailError }}
+              </p>
             </div>
   
             <div>
@@ -157,16 +202,13 @@ async function submitLogin() {
                 placeholder="Enter password"
                 class="mt-2 w-full h-11 rounded-lg border body2 border-gray-400 bg-gray-200 px-3 text-[18px] text-gray-900 placeholder:text-gray-500 outline-none focus:border-purple-300 focus:ring-2 focus:ring-purple-200"
                 v-model="password"
+                autocomplete="current-password"
               />
+              <p v-if="passwordError" class="mt-2 text-red-500 text-sm">
+                {{ passwordError }}
+              </p>
             </div>
 
-            <p
-              v-if="loginError"
-              class="mt-2 text-red-500 text-sm"
-            >
-              {{ loginError }}
-            </p>
-  
             <button
               type="submit"
               class="mt-1 w-[343px] max-w-full h-12 rounded-full body4 bg-red-500 text-white text-[20px] font-semibold leading-none"
