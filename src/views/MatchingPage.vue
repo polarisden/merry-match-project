@@ -13,11 +13,13 @@ import ProfilePreviewCard from '@/components/profile/ProfilePreviewCard.vue'
 import ChatRoomCard from '@/views/chat/ChatRoomPage.vue'
 import ListWithMatchPageMobile from '@/components/ListWithMatchPageMobile.vue'
 
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { fetchChatRoomsByMatch, fetchChatRoomsForUser } from '@/views/chat/chatApi'
 import { apiUrl } from '@/lib/apiBase'
+import { getChatPollIntervalMs } from '@/lib/chatPollMs'
+import { useChatRoomsRealtime } from '@/views/chat/useChatRoomsRealtime'
 
 const route = useRoute()
 const router = useRouter()
@@ -38,7 +40,11 @@ const chatRooms = ref([])
 const chatRoomsLoading = ref(false)
 const chatRoomsError = ref('')
 
-async function loadChatRooms() {
+/**
+ * @param {{ silent?: boolean }} [opts] silent = background refresh (no loading spinner, keep list on error)
+ */
+async function loadChatRooms(opts = {}) {
+  const silent = Boolean(opts.silent)
   chatRoomsError.value = ''
   authStore.hydrate()
   const t = authStore.token
@@ -47,7 +53,7 @@ async function loadChatRooms() {
     return
   }
   const mid = matchIdForChat.value
-  chatRoomsLoading.value = true
+  if (!silent) chatRoomsLoading.value = true
   try {
     chatRooms.value = mid
       ? await fetchChatRoomsByMatch(mid, t)
@@ -55,12 +61,39 @@ async function loadChatRooms() {
     const openId = selectedChatRoomId.value
     if (openId) clearUnreadForRoom(openId)
   } catch (e) {
-    chatRooms.value = []
-    chatRoomsError.value = e instanceof Error ? e.message : 'Failed to load chats'
+    if (!silent) {
+      chatRooms.value = []
+      chatRoomsError.value = e instanceof Error ? e.message : 'Failed to load chats'
+    }
   } finally {
-    chatRoomsLoading.value = false
+    if (!silent) chatRoomsLoading.value = false
   }
 }
+
+/** @type {ReturnType<typeof setInterval> | null} */
+let chatRoomsPollTimer = null
+
+function stopChatRoomsPoll() {
+  if (chatRoomsPollTimer != null) {
+    clearInterval(chatRoomsPollTimer)
+    chatRoomsPollTimer = null
+  }
+}
+
+function startChatRoomsPoll() {
+  stopChatRoomsPoll()
+  const ms = getChatPollIntervalMs()
+  if (ms <= 0) return
+  chatRoomsPollTimer = setInterval(() => {
+    loadChatRooms({ silent: true })
+  }, ms)
+}
+
+useChatRoomsRealtime({
+  matchIdRef: matchIdForChat,
+  isEnabled: () => Boolean(authStore.token),
+  onRefresh: () => loadChatRooms({ silent: true }),
+})
 
 /** ห้องที่เปิดอยู่ถือว่าอ่านแล้ว — ซ่อน badge ทันที (สอดคล้องกับ mark read ใน ChatRoom) */
 function clearUnreadForRoom(roomId) {
@@ -160,9 +193,14 @@ async function loadSwipeLimit() {
 onMounted(() => {
   ensureSexualPreferenceQuery()
   loadChatRooms()
+  startChatRoomsPoll()
   loadProfiles()
   loadMerryMatches()
   loadSwipeLimit()
+})
+
+onUnmounted(() => {
+  stopChatRoomsPoll()
 })
 
 watch(
