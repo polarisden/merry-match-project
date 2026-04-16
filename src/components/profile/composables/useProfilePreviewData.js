@@ -1,8 +1,8 @@
 import { computed, ref, watch } from "vue"
 import {
   getMyProfile,
-  getUserProfileById,
-  getUserProfile, listMyProfileImages,
+  getUserProfile,
+  listMyProfileImages,
   listUserProfileImages,
 } from "@/views/profile/profileApi"
 import { sortProfileImagesForDisplay } from "@/components/profile/utils/profileImageOrder"

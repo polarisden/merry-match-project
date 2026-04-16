@@ -475,8 +475,8 @@ function onLike() {
       v-else
       class="relative w-[375px]"
     >
-      <div class="relative h-[619px] w-[375px] overflow-hidden rounded-b-[24px]">
-        <img :src="faceImg" alt="face" class="h-full w-full object-cover" />
+      <div v-if="currentProfile" class="relative h-[619px] w-[375px] overflow-hidden rounded-b-[24px]">
+        <img :src="currentProfile.img" :alt="currentProfile.name" class="h-full w-full object-cover" />
         <div
           class="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(7,9,65,0)_61.94%,#390741_100%)]"
         ></div>
@@ -484,8 +484,8 @@ function onLike() {
         <div class="h-[152px] absolute z-30 right-0 bottom-0 w-dvw pr-[16px] pl-[16px] pb-[16px] flex flex-col justify-center gap-1">
           <div class="text-white headline3 text-[36px]! flex justify-between items-center">
             <div class="flex gap-4">
-              <span>Daeny</span>
-              <span>24</span>
+              <span>{{ currentProfile.name }}</span>
+              <span>{{ currentProfile.age }}</span>
             </div>
             <div
               class="w-8 h-8 flex justify-center items-center rounded-full bg-[#FFFFFF33] shadow-[2px_2px_12px_0px_#4032851F] transition-opacity duration-300 ease-out active:opacity-80 cursor-pointer"
@@ -496,23 +496,31 @@ function onLike() {
           </div>
           <div class="flex gap-[6px]">
             <locationLogo class="w-5 h-5 text-[#BEBFF1]" />
-            <span class="text-gray-400 body-2 font-normal">Bangkok, Thailand</span>
+            <span class="text-gray-400 body-2 font-normal">{{ currentProfile.location || '—' }}</span>
           </div>
         </div>
       </div>
 
-      <div class="absolute z-40 bottom-[-40px] left-1/2 -translate-x-1/2 flex gap-6">
+      <div v-else class="flex h-[619px] w-[375px] flex-col items-center justify-center rounded-b-[24px] bg-white/60 text-center px-8">
+        <div class="text-5xl mb-4">🔍</div>
+        <h2 class="headline4 text-gray-800 mb-2">No more profiles</h2>
+        <p class="body4 text-gray-500">Try adjusting your filters to see more people.</p>
+      </div>
+
+      <div v-if="currentProfile" class="absolute z-40 bottom-[-40px] left-1/2 -translate-x-1/2 flex gap-6">
         <button
           type="button"
-          aria-label="Close"
+          aria-label="Dislike"
           class="bg-white w-[80px] h-[80px] rounded-3xl flex justify-center items-center shadow-[2px_2px_12px_0px_#4032851F]"
+          @click="onDislike"
         >
           <xLogo class="size-[50px] text-gray-700 stroke-4" />
         </button>
         <button
           type="button"
-          aria-label="Close"
+          aria-label="Like"
           class="bg-white w-[80px] h-[80px] rounded-3xl flex justify-center items-center shadow-[2px_2px_12px_0px_#4032851F]"
+          @click="onLike"
         >
           <heartLogo class="size-[50px] text-red-500" />
         </button>
