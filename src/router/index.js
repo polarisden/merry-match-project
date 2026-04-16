@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { getMyProfile } from '@/views/profile/profileApi'
 import HomePage from '@/views/HomePage.vue'
 import TestPage from '@/views/TestPage.vue'
 import RegisterPage from '@/views/RegisterPage.vue'
@@ -34,6 +36,7 @@ const router = createRouter({
     { path: '/report', component: ReportPage },
     {
       path: '/admin',
+      meta: { requiresAdmin: true }, //เฉพาะ admin ที่เข้า path นี้ได้
       component: AdminSideBar,
       children: [
         {
@@ -83,6 +86,29 @@ const router = createRouter({
       },
     },
   ],
+})
+
+router.beforeEach(async (to) => {
+  if (!to.matched.some((r) => r.meta?.requiresAdmin)) return true
+
+  const authStore = useAuthStore()
+  authStore.hydrate()
+
+  if (!authStore.token) {
+    return { path: '/Login', query: { redirect: to.fullPath } }
+  }
+
+  try {
+    const profile = await getMyProfile(authStore.token)
+    const role = String(profile?.role ?? '').trim().toLowerCase()
+    if (role !== 'admin') {
+      return { path: '/' }
+    }
+  } catch {
+    return { path: '/Login', query: { redirect: to.fullPath } }
+  }
+
+  return true
 })
 
 export default router
