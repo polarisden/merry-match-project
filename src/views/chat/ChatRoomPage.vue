@@ -61,19 +61,13 @@ function onSendImageDraft({ file, caption }) {
       Unread messages elsewhere: {{ unreadTotal }}
     </span>
 
-    <!-- Reserve space for future navbar on lg+ -->
     <div
-      class="hidden lg:block h-16 border-b border-gray-200 bg-bg-main"
-      aria-hidden="true"
-    />
-
-    <div
-      class="min-h-dvh w-full min-w-0 lg:min-h-[calc(100dvh-4rem)]"
+      class="min-h-dvh w-full min-w-0"
     >
       <!-- Chat column: full viewport width under the optional top bar -->
       <div class="flex min-w-0 w-full flex-col">
         <div
-          class="flex min-h-0 h-dvh flex-col lg:h-[calc(100dvh-4rem)]"
+          class="flex min-h-0 h-dvh flex-col"
         >
           <ChatHeader :contact-name="contactName" />
 
