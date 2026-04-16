@@ -1,7 +1,4 @@
 <script setup>
-import faceImg from '@/assets/images/face.png'
-import profile1Img from '@/assets/images/profile1.png'
-import profile2Img from '@/assets/images/profile2.png'
 import locationLogo from '@/assets/icons/location.svg'
 import frameLogo from '@/assets/icons/Frame.svg'
 import arrowLeftLogo from '@/assets/icons/arrow.svg'
@@ -20,6 +17,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { fetchChatRoomsByMatch, fetchChatRoomsForUser } from '@/views/chat/chatApi'
+import { apiUrl } from '@/lib/apiBase'
 
 const route = useRoute()
 const router = useRouter()
@@ -80,6 +78,24 @@ function openChatRoom(roomId) {
   router.replace({ path: route.path, query: { ...route.query, room: id } })
 }
 
+async function openChatRoomFromMatch(otherUserId) {
+  const token = authStore.token
+  if (!token || !currentUserId.value) return
+  try {
+    const res = await fetch(
+      apiUrl(`/api/chatroom-id?swiper_id=${currentUserId.value}&swiped_id=${otherUserId}`),
+      { headers: { Authorization: `Bearer ${token}` } },
+    )
+    if (!res.ok) return
+    const data = await res.json()
+    const roomId = data.chatroom_id
+    if (!roomId) return
+    openChatRoom(roomId)
+  } catch (e) {
+    console.error('Failed to get chat room id:', e)
+  }
+}
+
 watch(
   () => route.query.room,
   (q) => {
@@ -102,9 +118,60 @@ watch(selectedChatRoomId, (id, prev) => {
   if (prev && !id) loadChatRooms()
 })
 
+async function ensureSexualPreferenceQuery() {
+  if (route.query['sexual-preference']) return
+  const token = authStore.token
+  if (!token) return
+  try {
+    const res = await fetch(apiUrl('/api/users/me/profile'), {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return
+    const me = await res.json()
+    if (!me.sexualPreference) return
+    const mapped = queryToGender(me.sexualPreference)
+    if (!mapped) return
+    selectedGender.value = mapped
+    router.replace({
+      path: route.path,
+      query: { ...route.query, 'sexual-preference': genderToQuery(mapped) },
+    })
+  } catch {
+    // ignore
+  }
+}
+
+async function loadSwipeLimit() {
+  const token = authStore.token
+  if (!token) return
+  try {
+    const res = await fetch(apiUrl('/api/users/me/subscription'), {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return
+    const sub = await res.json()
+    const limit = sub.swipeLimit ?? sub.swipe_limit ?? sub.plan?.swipeLimit ?? sub.plan?.swipe_limit
+    if (limit != null) swipeLimit.value = Number(limit)
+  } catch {
+    // ignore — keep default
+  }
+}
+
 onMounted(() => {
+  ensureSexualPreferenceQuery()
   loadChatRooms()
+  loadProfiles()
+  loadMerryMatches()
+  loadSwipeLimit()
 })
+
+watch(
+  () => route.query['sexual-preference'],
+  (val) => {
+    selectedGender.value = queryToGender(val)
+    currentIndex.value = 0
+  },
+)
 
 const showPreview = ref(false)
 const showMobilePreview = ref(false)
@@ -132,55 +199,179 @@ function clearFilter() {
   filterMaxAge.value = 50
 }
 
-const minAge = ref(18)
-const maxAge = ref(50)
+const minAge = ref(Number(route.query.minAge) || 18)
+const maxAge = ref(Number(route.query.maxAge) || 50)
 
 const minPercent = computed(() => ((minAge.value - 18) / (100 - 18)) * 100)
 const maxPercent = computed(() => ((maxAge.value - 18) / (100 - 18)) * 100)
 
+function syncAgeToQuery() {
+  router.replace({
+    path: route.path,
+    query: { ...route.query, minAge: minAge.value, maxAge: maxAge.value },
+  })
+}
+
 function onMinInput(e) {
   const val = Number(e.target.value)
   minAge.value = Math.min(val, maxAge.value - 1)
+  currentIndex.value = 0
+  syncAgeToQuery()
 }
 function onMaxInput(e) {
   const val = Number(e.target.value)
   maxAge.value = Math.max(val, minAge.value + 1)
+  currentIndex.value = 0
+  syncAgeToQuery()
 }
 
 // Merry Match list
-const merryMatches = ref([
-  { id: 1, img: profile1Img, name: 'Name ja' },
-  { id: 2, img: profile2Img, name: 'Name ja' },
-  { id: 3, img: faceImg, name: 'Name ja' },
-  { id: 4, img: profile1Img, name: 'Name ja' },
-  { id: 5, img: profile1Img, name: 'Name ja' },
-  { id: 6, img: profile2Img, name: 'Name ja' },
-  { id: 7, img: faceImg, name: 'Name ja' },
-  { id: 8, img: profile1Img, name: 'Name ja' },
-  { id: 9, img: profile1Img, name: 'Name ja' },
-  { id: 10, img: profile2Img, name: 'Name ja' },
-  { id: 11, img: faceImg, name: 'Name ja' },
-  { id: 12, img: profile1Img, name: 'Name ja' },
-])
+const merryMatches = ref([])
+
+async function loadMerryMatches() {
+  try {
+    const token = authStore.token
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+
+    // get current user id
+    const meRes = await fetch(apiUrl('/api/users/me/profile'), { headers })
+    if (!meRes.ok) return
+    const me = await meRes.json()
+    const currentUserId = me.id ?? me.userId
+
+    const matchRes = await fetch(apiUrl(`/api/matchList?userId=${currentUserId}`), { headers })
+    if (!matchRes.ok) return
+    const matches = await matchRes.json()
+
+    const results = await Promise.all(
+      matches.map(async (match) => {
+        const otherId = match.user1Id === currentUserId ? match.user2Id : match.user1Id
+        try {
+          const picRes = await fetch(apiUrl(`/api/users/${otherId}/picture`), { headers })
+          if (!picRes.ok) return null
+          const pic = await picRes.json()
+          return { id: match.id, userId: otherId, img: pic.mainPicture }
+        } catch {
+          return null
+        }
+      })
+    )
+    merryMatches.value = results.filter(Boolean)
+    console.log("here",merryMatches.value)
+  } catch (e) {
+    console.error('Failed to load merry matches:', e)
+  }
+}
+
+function calcAge(dateOfBirth) {
+  const today = new Date()
+  const dob = new Date(dateOfBirth)
+  let age = today.getFullYear() - dob.getFullYear()
+  const m = today.getMonth() - dob.getMonth()
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--
+  return age
+}
+
+function getPrimaryImage(profileImages) {
+  const primary = profileImages?.find((img) => img.primary)
+  return primary?.imageUrl ?? profileImages?.[0]?.imageUrl ?? ''
+}
 
 // Card deck
-const profiles = ref([
-  { id: 1, name: 'Daeny', age: 24, location: 'Bangkok, Thailand', img: faceImg },
-  { id: 2, name: 'Aria', age: 22, location: 'Chiang Mai, Thailand', img: profile1Img },
-  { id: 3, name: 'Yara', age: 26, location: 'Phuket, Thailand', img: profile2Img },
-  { id: 4, name: 'Yaraa', age: 26, location: 'Phuket, Thailand', img: profile2Img },
-  { id: 5, name: 'Yara', age: 26, location: 'Phuket, Thailand', img: profile2Img },
-  { id: 6, name: 'Daeny', age: 24, location: 'Bangkok, Thailand', img: faceImg },
-  { id: 7, name: 'Aria', age: 22, location: 'Chiang Mai, Thailand', img: profile1Img },
-  { id: 8, name: 'Yara', age: 26, location: 'Phuket, Thailand', img: profile2Img },
-  { id: 9, name: 'Yara', age: 26, location: 'Phuket, Thailand', img: profile2Img },
-  { id: 10, name: 'Yara', age: 26, location: 'Phuket, Thailand', img: profile2Img },
-  { id: 11, name: 'Daeny', age: 24, location: 'Bangkok, Thailand', img: faceImg },
-  { id: 12, name: 'Aria', age: 22, location: 'Chiang Mai, Thailand', img: profile1Img },
-  { id: 13, name: 'Yara', age: 26, location: 'Phuket, Thailand', img: profile2Img },
-  { id: 14, name: 'Yara', age: 26, location: 'Phuket, Thailand', img: profile2Img },
-  { id: 15, name: 'Yara', age: 26, location: 'Phuket, Thailand', img: profile2Img },
-])
+const allProfiles = ref([])  // raw — never filtered
+const currentUserId = ref(null)
+const merryCount = ref(0)
+const swipeLimit = ref(20)
+
+// gender filter — synced with ?gender= query param
+// internal values: 'male' | 'female' | 'non-binary'
+// URL value for non-binary: 'LGBTQIAN+'
+// 'non-binary' filter = show users whose gender is NOT 'LGBTQIAN+'
+const GENDER_OPTIONS = ['male', 'female', 'non-binary']
+
+function queryToGender(val) {
+  if (val === 'LGBTQIAN' || val === 'LGBTQIAN+') return 'non-binary'
+  return GENDER_OPTIONS.includes(val) ? val : ''
+}
+function genderToQuery(g) {
+  if (g === 'non-binary') return 'LGBTQIAN'
+  return g || undefined
+}
+
+const q = [route.query['sexual-preference']].flat()[0]
+const selectedGender = ref(queryToGender(q))
+
+function toggleGender(value) {
+  selectedGender.value = selectedGender.value === value ? '' : value
+  router.replace({
+    path: route.path,
+    query: { ...route.query, 'sexual-preference': genderToQuery(selectedGender.value) },
+  })
+}
+
+const profiles = computed(() => {
+  return allProfiles.value.filter((u) => {
+    let genderMatch = true
+    if (selectedGender.value === 'non-binary') {
+      genderMatch = (u.gender ?? '').toUpperCase() === 'LGBTQIAN+'
+    } else if (selectedGender.value) {
+      genderMatch = u.gender === selectedGender.value
+    }
+    const ageMatch = u.age == null || (u.age >= minAge.value && u.age <= maxAge.value)
+    return genderMatch && ageMatch
+  })
+})
+
+async function loadProfiles() {
+  try {
+    const token = authStore.token
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+
+    // get current user id + sexualPreference for default gender filter
+    if (token) {
+      try {
+        const meRes = await fetch(apiUrl('/api/users/me/profile'), { headers })
+        if (meRes.ok) {
+          const me = await meRes.json()
+          currentUserId.value = me.id ?? me.userId ?? null
+          merryCount.value = Number(me.merryCount ?? me.merry_count ?? 0)
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    // fetch swipe history to exclude already-swiped users
+    let swipedIds = new Set()
+    if (currentUserId.value) {
+      try {
+        const swipeRes = await fetch(apiUrl(`/api/swipes/${currentUserId.value}/history`), { headers })
+        if (swipeRes.ok) {
+          const swipeData = await swipeRes.json()
+          swipedIds = new Set(swipeData.list_swiped ?? [])
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    const res = await fetch(apiUrl('/api/users'), { headers })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json()
+    allProfiles.value = data
+      .filter((u) => u.id !== currentUserId.value && !swipedIds.has(u.id))
+      .map((u) => ({
+        id: u.id,
+        name: u.name,
+        age: u.age ?? (u.dateOfBirth ? calcAge(u.dateOfBirth) : null),
+        location: [u.locationCity, u.locationCountry].filter(Boolean).join(', '),
+        img: u.mainImage ?? getPrimaryImage(u.profileImages),
+        gender: (u.gender ?? '').toLowerCase(),
+      }))
+  } catch (e) {
+    console.error('Failed to load profiles:', e)
+  }
+}
 const currentIndex = ref(0)
 
 const currentProfile = computed(() => profiles.value[currentIndex.value])
@@ -194,11 +385,82 @@ function goPrev() {
   if (currentIndex.value > 0) currentIndex.value--
 }
 
-function onDislike() {
-  goNext()
+const showMatchPopup = ref(false)
+const matchedProfile = ref(null)
+const showLimitPopup = ref(false)
+
+async function postSwipe(action) {
+  const profile = profiles.value[currentIndex.value]
+  if (!profile) return
+
+  // profiles is a computed — must splice from the raw allProfiles array
+  const rawIndex = allProfiles.value.findIndex((u) => u.id === profile.id)
+  if (rawIndex !== -1) allProfiles.value.splice(rawIndex, 1)
+  if (currentIndex.value >= profiles.value.length && currentIndex.value > 0) {
+    currentIndex.value--
+  }
+
+  const token = authStore.token
+  if (!token || !currentUserId.value) return
+  try {
+    await fetch(apiUrl('/api/swipes'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        swiper_id: currentUserId.value,
+        swiped_id: profile.id,
+        action,
+      }),
+    })
+
+    if (action === 'like') {
+      const countRes = await fetch(apiUrl('/api/count/merry'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ user_id: currentUserId.value }),
+      })
+      if (countRes.ok) merryCount.value++
+    }
+
+    // ถ้า like ให้เช็คว่าอีกฝ่าย like เราไว้ก่อนหรือเปล่า (= match)
+    if (action === 'like') {
+      const histRes = await fetch(apiUrl(`/api/swipes/${profile.id}/history`), {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (histRes.ok) {
+        const hist = await histRes.json()
+        const likedUs = new Set(hist.list_swiped_like ?? [])
+        if (likedUs.has(currentUserId.value)) {
+          matchedProfile.value = profile
+          showMatchPopup.value = true
+          loadMerryMatches()
+          loadChatRooms()
+        }
+      }
+    }
+  } catch (e) {
+    console.error('Failed to post swipe:', e)
+  }
 }
+
+function onDislike() {
+  postSwipe('pass')
+}
+const isUnlimited = computed(() => swipeLimit.value === -1)
+const swipeLimitDisplay = computed(() => isUnlimited.value ? 'unlimited' : swipeLimit.value)
+
 function onLike() {
-  goNext()
+  if (!isUnlimited.value && merryCount.value >= swipeLimit.value) {
+    showLimitPopup.value = true
+    return
+  }
+  postSwipe('like')
 }
 </script>
 
@@ -264,7 +526,7 @@ function onLike() {
       </div>
       <div class="flex gap-[10px] items-center">
         <span class="text-gray-700 body4">Merry limit today</span>
-        <span class="text-red-400 body4">2/20</span>
+        <span class="text-red-400 body4">{{ merryCount }}/{{ swipeLimitDisplay }}</span>
       </div>
     </footer>
   </div>
@@ -273,24 +535,29 @@ function onLike() {
   <div class="hidden min-h-dvh w-full min-w-0 lg:flex">
     <!-- left container -->
     <section class="h-dvh w-[22%] flex flex-col relative">
-      <div class="h-[259px] flex items-center justify-center border-b border-b-gray-300 px-4">
-        <div class="flex flex-col items-center gap-1 p-6 border border-purple-500 rounded-[16px] bg-gray-100">
+      <div class="h-[259px] shrink-0 flex items-center justify-center border-b border-b-gray-300 px-4">
+        <div class="flex flex-col items-center gap-1 p-6 border border-purple-500 rounded-[16px] bg-gray-100 cursor-pointer" @click="$router.push('/matching')">
           <mathNsearchLogo class="w-[62px] h-[59px]"/>
           <span class="block text-red-600 headline4">Discover New Match</span>
           <span class="w-[calc(94%)] body4 text-gray-700 text-center">Start find and Merry to get know and connect with new friend!</span>
         </div>
       </div>
-      <div class="px-4 py-6 flex flex-col gap-4 h-[194px]">
+      <div class="px-4 py-6 flex flex-col gap-4 h-[210px] shrink-0">
         <span class="headline4 text-gray-900">Merry Match!</span>
-        <div class="flex gap-[12px] overflow-x-auto scrollbar-hide">
-          <div v-for="match in merryMatches" :key="match.id" class="relative shrink-0">
+        <div class="flex gap-[12px] overflow-x-auto overflow-y-hidden pb-2">
+          <div
+            v-for="match in merryMatches"
+            :key="match.id"
+            class="relative shrink-0 cursor-pointer"
+            @click="openChatRoomFromMatch(match.userId)"
+          >
             <img :src="match.img" class="size-[100px] object-cover rounded-[24px]">
             <merryMatchLogo class="text-red-400 absolute right-0 bottom-0 w-[34px] h-5 stroke-4"/>
           </div>
         </div>
       </div>
-      <div class="flex flex-col px-4 gap-4">
-        <div class="flex items-center gap-2">
+      <div class="flex flex-1 min-h-0 flex-col px-4 gap-4 pb-4">
+        <div class="flex items-center gap-2 shrink-0">
           <span class="headline4 text-gray-900">Chat with Merry Match</span>
           <span
             v-if="unreadChatTotal > 0"
@@ -312,11 +579,11 @@ function onLike() {
         <p v-else-if="chatRooms.length === 0" class="body4 text-gray-500">
           {{ matchIdForChat ? 'No chat rooms for this match yet.' : 'No chat rooms yet.' }}
         </p>
-        <div v-else class="flex flex-col gap-2">
+        <div v-else class="flex flex-col gap-2 overflow-y-auto min-h-0">
           <div
             v-for="room in chatRooms"
             :key="room.id"
-            class="min-h-[92px] py-4 px-3 flex gap-3 items-center cursor-pointer rounded-[16px] border border-white"
+            class="min-h-[92px] py-4 px-3 flex gap-3 items-center cursor-pointer rounded-[16px] border border-white shrink-0"
             :class="selectedChatRoomId === room.id ? 'border-purple-500! bg-gray-100' : ''"
             @click="openChatRoom(room.id)"
           >
@@ -397,6 +664,19 @@ function onLike() {
               </div>
             </div>
 
+            <!-- empty state -->
+            <div
+              v-else
+              class="flex h-[620px] w-[620px] flex-col items-center justify-center rounded-[32px] bg-white/60 backdrop-blur-sm z-10 shadow-[0_8px_32px_rgba(0,0,0,0.08)] text-center px-10"
+            >
+              <div class="text-6xl mb-5">🔍</div>
+              <h2 class="headline3 text-gray-800 mb-2">No more profiles to show</h2>
+              <p class="body2 text-gray-500 leading-relaxed">
+                You've seen everyone who matches your preferences.<br />
+                Try adjusting your discovery settings to expand your search.
+              </p>
+            </div>
+
             <!-- next card (peek right) -->
             <div
               v-if="nextProfile"
@@ -408,7 +688,7 @@ function onLike() {
           </div>
 
           <!-- action buttons -->
-          <div class="flex gap-6 mt-[-36px] z-20 relative">
+          <div v-if="currentProfile" class="flex gap-6 mt-[-36px] z-20 relative">
             <button
               @click="onDislike"
               class="bg-white w-[72px] h-[72px] rounded-3xl flex justify-center items-center shadow-[2px_2px_12px_0px_#4032851F] hover:scale-105 transition-transform cursor-pointer"
@@ -428,7 +708,7 @@ function onLike() {
       <div class="flex justify-center h-[56px] pb-8 shrink-0 items-center px-4">
         <div class="flex gap-[10px] items-center justify-center">
           <span class="body2 mx-auto text-gray-700">Merry limit today</span>
-          <span class="body2 text-red-400">2/20</span>
+          <span class="body2 text-red-400">{{ merryCount }}/{{ swipeLimitDisplay }}</span>
         </div>
       </div>
     </section>
@@ -441,27 +721,33 @@ function onLike() {
       <div class="flex flex-col gap-4">
         <span class="body2 font-bold! text-gray-900">Gender you interest</span>
         <div class="flex flex-col gap-4 items-start mb-15">
-          <div class="flex gap-3 justify-center items-center">
+          <label class="flex gap-3 justify-center items-center cursor-pointer">
             <input
               type="checkbox"
+              :checked="selectedGender === 'male'"
+              @change="toggleGender('male')"
               class="size-[18px] shrink-0 cursor-pointer rounded border-2 border-purple-300 accent-purple-500"
             />
-            <span class="body2 font-medium! gray-700">Default</span>
-          </div>
-          <div class="flex gap-3 justify-center items-center">
+            <span class="body2 font-medium! gray-700">Male</span>
+          </label>
+          <label class="flex gap-3 justify-center items-center cursor-pointer">
             <input
               type="checkbox"
+              :checked="selectedGender === 'female'"
+              @change="toggleGender('female')"
               class="size-[18px] shrink-0 cursor-pointer rounded border-2 border-purple-300 accent-purple-500"
             />
             <span class="body2 font-medium! gray-700">Female</span>
-          </div>
-          <div class="flex gap-3 justify-center items-center">
+          </label>
+          <label class="flex gap-3 justify-center items-center cursor-pointer">
             <input
               type="checkbox"
+              :checked="selectedGender === 'non-binary'"
+              @change="toggleGender('non-binary')"
               class="size-[18px] shrink-0 cursor-pointer rounded border-2 border-purple-300 accent-purple-500"
             />
-            <span class="body2 font-medium! gray-700">Non-bunary people</span>
-          </div>
+            <span class="body2 font-medium! gray-700">Non-binary people</span>
+          </label>
         </div>
         <div class="flex flex-col gap-3">
           <span class="body2 font-bold! text-gray-900">Age Range</span>
@@ -581,7 +867,86 @@ function onLike() {
 
   <!-- profile preview modal (desktop) -->
   <Teleport to="body">
-    <ProfilePreviewPopUp :open="showPreview" @close="showPreview = false" />
+    <ProfilePreviewPopUp :open="showPreview" :user-id="currentProfile?.id" @close="showPreview = false" />
+  </Teleport>
+
+  <!-- match popup -->
+  <Teleport to="body">
+    <Transition name="sheet">
+      <div
+        v-if="showMatchPopup"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+        @click.self="showMatchPopup = false"
+      >
+        <div class="relative flex flex-col items-center gap-6 rounded-[32px] bg-white px-10 py-10 shadow-2xl max-w-[380px] w-full mx-4 text-center">
+          <button
+            class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center cursor-pointer hover:bg-gray-200 transition"
+            @click="showMatchPopup = false"
+          >
+            <xLogo class="size-4 text-gray-700" />
+          </button>
+          <img
+            v-if="matchedProfile?.img"
+            :src="matchedProfile.img"
+            class="w-[120px] h-[120px] rounded-full object-cover ring-4 ring-red-400"
+            alt=""
+          />
+          <div class="flex flex-col gap-2">
+            <span class="headline3 text-[#1A1A6E]">It's a Match!</span>
+            <span class="body2 text-gray-600">
+              You and <strong>{{ matchedProfile?.name }}</strong> liked each other
+            </span>
+          </div>
+          <button
+            class="w-full h-[52px] rounded-full bg-red-500 text-white body2 font-bold! cursor-pointer hover:bg-red-600 transition-colors"
+            @click="showMatchPopup = false"
+          >
+            Keep Swiping
+          </button>
+        </div>
+      </div>
+    </Transition>
+  </Teleport>
+
+  <!-- merry limit reached popup -->
+  <Teleport to="body">
+    <Transition name="sheet">
+      <div
+        v-if="showLimitPopup"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+        @click.self="showLimitPopup = false"
+      >
+        <div class="relative flex flex-col items-center gap-6 rounded-[32px] bg-white px-10 py-10 shadow-2xl max-w-[380px] w-full mx-4 text-center">
+          <button
+            class="absolute top-4 right-4 w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center cursor-pointer hover:bg-gray-200 transition"
+            @click="showLimitPopup = false"
+          >
+            <xLogo class="size-4 text-gray-700" />
+          </button>
+          <div class="w-[80px] h-[80px] rounded-full bg-red-100 flex items-center justify-center">
+            <heartLogo class="size-[44px] text-red-400" />
+          </div>
+          <div class="flex flex-col gap-2">
+            <span class="headline3 text-[#1A1A6E]">Merry Limit Reached!</span>
+            <span class="body2 text-gray-600">
+              You've used all <strong>{{ swipeLimit }}</strong> Merry for today. Come back tomorrow or upgrade your plan to get more!
+            </span>
+          </div>
+          <button
+            class="w-full h-[52px] rounded-full bg-red-100 text-red-600 body2 font-bold! cursor-pointer hover:bg-red-200 transition-colors"
+            @click="showLimitPopup = false; $router.push('/packages')"
+          >
+            Upgrade Plan
+          </button>
+          <button
+            class="w-full h-[52px] rounded-full bg-gray-100 text-gray-700 body2 font-bold! cursor-pointer hover:bg-gray-200 transition-colors"
+            @click="showLimitPopup = false"
+          >
+            OK
+          </button>
+        </div>
+      </div>
+    </Transition>
   </Teleport>
 
   <!-- profile preview modal (mobile) -->

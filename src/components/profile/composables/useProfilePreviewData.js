@@ -2,7 +2,7 @@ import { computed, ref, watch } from "vue"
 import {
   getMyProfile,
   getUserProfileById,
-  listMyProfileImages,
+  getUserProfile, listMyProfileImages,
   listUserProfileImages,
 } from "@/views/profile/profileApi"
 import { sortProfileImagesForDisplay } from "@/components/profile/utils/profileImageOrder"
@@ -115,36 +115,22 @@ export function useProfilePreviewData() {
     }
   })
 
-  async function loadPreview(options = {}) {
+  async function loadPreview() {
     loading.value = true
     loadError.value = ""
     const token = localStorage.getItem("token") ?? ""
     if (!token) {
-      loadError.value = "Please log in to view your profile."
+      loadError.value = "Please log in to view profiles."
       profile.value = null
       photoUrls.value = []
       loading.value = false
       return
     }
     try {
-      const targetUserId =
-        options && options.userId != null ? String(options.userId).trim() : ""
-      const fallbackPhotoUrl =
-        options && typeof options.fallbackPhotoUrl === "string" ? options.fallbackPhotoUrl.trim() : ""
-
-      let p
-      let rawImages = []
-      if (targetUserId) {
-        ;[p, rawImages] = await Promise.all([
-          getUserProfileById(targetUserId, token),
-          listUserProfileImages(targetUserId, token).catch(() => []),
-        ])
-      } else {
-        ;[p, rawImages] = await Promise.all([
-          getMyProfile(token),
-          listMyProfileImages(token).catch(() => []),
-        ])
-      }
+      const [p, rawImages] = await Promise.all([
+        getMyProfile(token),
+        listMyProfileImages(token).catch(() => []),
+      ])
       profile.value = p
       if (targetUserId) {
         const sorted = sortProfileImagesForDisplay(Array.isArray(rawImages) ? rawImages : [])

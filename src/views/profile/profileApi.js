@@ -17,15 +17,13 @@ export async function getMyProfile(token) {
   return await res.json()
 }
 
-export async function getUserProfileById(userId, token) {
-  const id = String(userId || "").trim()
-  if (!id) throw new Error("Missing user id")
-  const res = await fetch(apiUrl(`/api/users/${encodeURIComponent(id)}/profile`), {
+export async function getUserProfile(userId, token) {
+  const res = await fetch(apiUrl(`/api/users/${encodeURIComponent(userId)}/profile`), {
     headers: { ...authHeaders(token) },
   })
   if (!res.ok) {
-    const text = await res.text().catch(() => "")
-    throw new Error(text || `Load profile failed (${res.status})`)
+    const text = await res.text().catch(() => '')
+    throw new Error(text || `Load user profile failed (${res.status})`)
   }
   return await res.json()
 }

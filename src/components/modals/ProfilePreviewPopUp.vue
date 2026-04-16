@@ -41,13 +41,9 @@ const {
 } = useProfilePreviewData()
 
 watch(
-  () => [props.open, props.targetUserId, props.fallbackPhotoUrl],
-  ([isOpen]) => {
-    if (!isOpen) return
-    loadPreview({
-      userId: props.targetUserId,
-      fallbackPhotoUrl: props.fallbackPhotoUrl,
-    })
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) loadPreview()
   },
   { immediate: true },
 )
