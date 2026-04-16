@@ -17,6 +17,18 @@ export async function getMyProfile(token) {
   return await res.json()
 }
 
+export async function getUserProfile(userId, token) {
+  const res = await fetch(apiUrl(`/api/users/${encodeURIComponent(userId)}/profile`), {
+    headers: { ...authHeaders(token) },
+  })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(text || `Load user profile failed (${res.status})`)
+  }
+  return await res.json()
+}
+
+
 export async function updateMyProfile(payload, token) {
   const res = await fetch(apiUrl(`/api/users/me/profile`), {
     method: 'PUT',

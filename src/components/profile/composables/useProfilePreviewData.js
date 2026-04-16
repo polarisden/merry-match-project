@@ -1,5 +1,5 @@
 import { computed, ref, watch } from "vue"
-import { getMyProfile, listMyProfileImages } from "@/views/profile/profileApi"
+import { getMyProfile, getUserProfile, listMyProfileImages } from "@/views/profile/profileApi"
 import { sortProfileImagesForDisplay } from "@/components/profile/utils/profileImageOrder"
 
 function ageFromIsoDate(iso) {
@@ -110,22 +110,28 @@ export function useProfilePreviewData() {
     }
   })
 
-  async function loadPreview() {
+  async function loadPreview(userId) {
     loading.value = true
     loadError.value = ""
     const token = localStorage.getItem("token") ?? ""
     if (!token) {
-      loadError.value = "Please log in to view your profile."
+      loadError.value = "Please log in to view profiles."
       profile.value = null
       photoUrls.value = []
       loading.value = false
       return
     }
     try {
-      const [p, rawImages] = await Promise.all([
-        getMyProfile(token),
-        listMyProfileImages(token).catch(() => []),
-      ])
+      let p, rawImages
+      if (userId) {
+        p = await getUserProfile(userId, token)
+        rawImages = Array.isArray(p.images) ? p.images : []
+      } else {
+        ;[p, rawImages] = await Promise.all([
+          getMyProfile(token),
+          listMyProfileImages(token).catch(() => []),
+        ])
+      }
       profile.value = p
       const sorted = sortProfileImagesForDisplay(Array.isArray(rawImages) ? rawImages : [])
       photoUrls.value = sorted.map((img) => img?.imageUrl).filter(Boolean)

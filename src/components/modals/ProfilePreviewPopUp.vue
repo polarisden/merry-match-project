@@ -10,6 +10,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  userId: {
+    type: String,
+    default: '',
+  },
 })
 
 const emit = defineEmits(["close"])
@@ -35,7 +39,7 @@ const {
 watch(
   () => props.open,
   (isOpen) => {
-    if (isOpen) loadPreview()
+    if (isOpen) loadPreview(props.userId || undefined)
   },
 )
 </script>
