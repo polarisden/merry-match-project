@@ -1,5 +1,6 @@
 import { computed, nextTick, onUnmounted, ref, watch } from "vue"
 import { getMyProfile } from "@/views/profile/profileApi"
+import { getChatPollIntervalMs } from "@/lib/chatPollMs"
 import { supabase } from "@/lib/supabase"
 import {
   fetchChatMessages,
@@ -156,6 +157,32 @@ export function useChatRoom(route) {
   }
 
   let realtimeChannel = null
+  /** @type {ReturnType<typeof setInterval> | null} */
+  let pollTimer = null
+
+  function stopPolling() {
+    if (pollTimer != null) {
+      clearInterval(pollTimer)
+      pollTimer = null
+    }
+  }
+
+  function startPolling() {
+    stopPolling()
+    const ms = getChatPollIntervalMs()
+    if (ms <= 0) return
+    pollTimer = setInterval(async () => {
+      const t = token.value
+      const roomId = chatRoomId.value
+      if (!t || !roomId || loading.value) return
+      try {
+        const rows = await fetchChatMessages(roomId, t)
+        mergeMessagesFromApi(rows)
+      } catch {
+        /* non-fatal: network or auth */
+      }
+    }, ms)
+  }
 
   function subscribeRealtime() {
     if (!supabase) return
@@ -239,6 +266,7 @@ export function useChatRoom(route) {
   }
 
   async function loadInitial() {
+    stopPolling()
     loadError.value = ""
     sendError.value = ""
     loading.value = true
@@ -269,6 +297,7 @@ export function useChatRoom(route) {
 
     unsubscribeRealtime()
     subscribeRealtime()
+    startPolling()
 
     try {
       await markChatRoomRead(roomId, t, { readerId: currentUserId.value })
@@ -352,6 +381,7 @@ export function useChatRoom(route) {
   }
 
   onUnmounted(() => {
+    stopPolling()
     unsubscribeRealtime()
   })
 
