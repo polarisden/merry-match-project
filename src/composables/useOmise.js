@@ -16,7 +16,24 @@ let loadPromise = null;
  */
 
 async function resolvePublicKey() {
-  return OMISE_PUBLIC_KEY;
+  const key = OMISE_PUBLIC_KEY.trim();
+  console.info("[omise] key debug", {
+    exists: Boolean(key),
+    len: key.length,
+    key,
+  });
+
+  if (!key) {
+    throw new Error(
+      "Missing VITE_OMISE_PUBLIC_KEY. Set it in your deployment environment and redeploy.",
+    );
+  }
+  if (!key.startsWith("pkey_")) {
+    throw new Error(
+      "Invalid VITE_OMISE_PUBLIC_KEY. Expected an Omise public key starting with 'pkey_'.",
+    );
+  }
+  return key;
 }
 
 /**
