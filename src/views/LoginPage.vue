@@ -224,4 +224,5 @@ async function submitLogin() {
       </div>
     </div>
   </div>
+</MainLayout>
 </template>
