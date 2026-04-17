@@ -22,6 +22,7 @@ export function useRegisterFormState() {
     sexualPreference: "",
     racialPreference: "Asia",
     meetingInterest: "Dating",
+    bio: "",
   })
 
   const openDropdown = ref(null)

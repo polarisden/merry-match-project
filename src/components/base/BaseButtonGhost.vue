@@ -29,20 +29,20 @@ defineEmits(["click"])
   font-weight: 700;
   font-size: 16px;
   line-height: 24px;
-  color: #C70039;
+  color: var(--btn-color, #C70039);
   background-color: transparent;
-  padding: 12px 24px;
+  padding: var(--btn-py, 12px) var(--btn-px, 24px);
   transition: all 0.3s ease-out;
   cursor: pointer;
   border: none;
 }
 
 .btn-ghost:hover {
-  color: #FF1659;
+  color: var(--btn-color-hover, #FF1659);
 }
 
 .btn-ghost:active {
-  color: #95002B;
+  color: var(--btn-color-active, #95002B);
 }
 
 .btn-ghost:disabled {

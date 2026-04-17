@@ -28,7 +28,7 @@ defineEmits(["click"])
   color: white;
   background-color: #C70039;
   border-radius: 99px;
-  padding: 12px 24px;
+  padding: var(--btn-py, 12px) var(--btn-px, 24px);
   text-align: center;
   transition: all 0.3s ease-out;
   box-shadow: 0 4px 12px rgba(199, 0, 57, 0.4);

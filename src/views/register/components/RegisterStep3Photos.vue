@@ -62,7 +62,8 @@
 
     <p
       v-if="registerError"
-      class="mt-3 text-red-500 text-sm"
+      class="mt-3 rounded-lg border border-red-200 bg-red-100 px-3 py-2 body2 text-red-700"
+      role="alert"
     >
       {{ registerError }}
     </p>

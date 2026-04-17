@@ -1,3 +1,4 @@
+import { apiUrl } from "@/lib/apiBase"
 import { strField } from "./registerValidation"
 
 export function extractAuthToken(body) {
@@ -25,6 +26,7 @@ export function buildRegisterPayload(formValues, locationName, cityName, photos)
   const sexualPreference = strField(formValues.sexualPreference)
   const racialPreference = strField(formValues.racialPreference)
   const meetingInterest = strField(formValues.meetingInterest)
+  const bio = strField(formValues.bio)
 
   return {
     name,
@@ -39,6 +41,7 @@ export function buildRegisterPayload(formValues, locationName, cityName, photos)
     sexualPreference,
     racialPreference,
     meetingInterest,
+    bio,
     photos,
     date_of_birth: dateOfBirth,
     confirm_password: confirmPassword,
@@ -46,6 +49,7 @@ export function buildRegisterPayload(formValues, locationName, cityName, photos)
     sexual_preference: sexualPreference,
     racial_preference: racialPreference,
     meeting_interest: meetingInterest,
+    bio_text: bio,
     gendar: sexualIdentity,
     location_country: locationName,
     location_city: cityName,
@@ -55,7 +59,7 @@ export function buildRegisterPayload(formValues, locationName, cityName, photos)
 }
 
 export async function submitRegisterRequest(payload) {
-  const res = await fetch("/api/auth/register", {
+  const res = await fetch(apiUrl("/api/auth/register"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

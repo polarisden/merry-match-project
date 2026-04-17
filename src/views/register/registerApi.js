@@ -1,3 +1,5 @@
+import { apiUrl } from "@/lib/apiBase"
+
 function parseDuplicateCheckResult(body, field) {
   if (typeof body === "boolean") {
     return { available: body, message: body ? "" : "This value is already in use." }
@@ -42,22 +44,12 @@ function isDuplicateMessage(message) {
 }
 
 export async function checkDuplicateField(field, value) {
-  const requests =
+  // Backend supports only: GET /api/auth/check-availability?email=... or ?username=...
+  const query =
     field === "email"
-      ? [
-          { url: `/api/auth/check-availability?email=${encodeURIComponent(value)}`, method: "GET" },
-          { url: "/api/auth/check-availability", method: "POST", body: JSON.stringify({ email: value }) },
-          { url: `/api/auth/check-email?email=${encodeURIComponent(value)}`, method: "GET" },
-          { url: `/api/auth/check-duplicate?email=${encodeURIComponent(value)}`, method: "GET" },
-          { url: "/api/auth/check-duplicate", method: "POST", body: JSON.stringify({ email: value }) },
-        ]
-      : [
-          { url: `/api/auth/check-availability?username=${encodeURIComponent(value)}`, method: "GET" },
-          { url: "/api/auth/check-availability", method: "POST", body: JSON.stringify({ username: value }) },
-          { url: `/api/auth/check-username?username=${encodeURIComponent(value)}`, method: "GET" },
-          { url: `/api/auth/check-duplicate?username=${encodeURIComponent(value)}`, method: "GET" },
-          { url: "/api/auth/check-duplicate", method: "POST", body: JSON.stringify({ username: value }) },
-        ]
+      ? `email=${encodeURIComponent(value)}`
+      : `username=${encodeURIComponent(value)}`
+  const requests = [{ url: apiUrl(`/api/auth/check-availability?${query}`), method: "GET" }]
 
   let sawReachableEndpoint = false
 
@@ -123,7 +115,7 @@ export async function checkDuplicateField(field, value) {
 }
 
 export async function fetchInterestsOptions() {
-  const res = await fetch("/api/interests")
+  const res = await fetch(apiUrl("/api/interests"))
   if (!res.ok) return { interestOptions: [], interestTags: [] }
 
   const contentType = res.headers.get("content-type") ?? ""
@@ -141,6 +133,20 @@ export async function fetchInterestsOptions() {
     interestOptions,
     interestTags: interestOptions.map((item) => item.name),
   }
+}
+
+export async function createInterest(name) {
+  const res = await fetch(apiUrl("/api/interests"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name }),
+  })
+  const contentType = res.headers.get("content-type") ?? ""
+  const body = contentType.includes("application/json") ? await res.json() : await res.text()
+  if (!res.ok) {
+    throw new Error(typeof body === "string" ? body : body?.message ?? body?.error ?? `Create interest failed (${res.status})`)
+  }
+  return body
 }
 
 export async function submitMyInterestsRequest(token, selectedInterestTags, interestOptions) {
@@ -167,7 +173,7 @@ export async function submitMyInterestsRequest(token, selectedInterestTags, inte
 
   let lastError = ""
   for (const payload of payloadCandidates) {
-    const res = await fetch("/api/users/me/interests", {
+    const res = await fetch(apiUrl("/api/users/me/interests"), {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",

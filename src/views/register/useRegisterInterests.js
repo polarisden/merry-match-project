@@ -1,5 +1,5 @@
 import { ref } from "vue"
-import { fetchInterestsOptions } from "./registerApi"
+import { createInterest, fetchInterestsOptions } from "./registerApi"
 
 export function useRegisterInterests() {
   const interestTags = ref([])
@@ -35,6 +35,25 @@ export function useRegisterInterests() {
     }
   }
 
+  async function addInterestByName(name) {
+    const raw = String(name || "").trim()
+    if (!raw) return
+
+    // If it already exists in options, just select it.
+    const existing = interestOptions.value.find((x) => String(x?.name || "").toLowerCase() === raw.toLowerCase())
+    if (existing?.name) {
+      selectInterestTag(existing.name)
+      return
+    }
+
+    // Create in DB then refresh list and select.
+    await createInterest(raw)
+    await fetchInterests()
+    const created = interestOptions.value.find((x) => String(x?.name || "").toLowerCase() === raw.toLowerCase())
+    if (created?.name) selectInterestTag(created.name)
+    else selectInterestTag(raw)
+  }
+
   return {
     interestTags,
     selectedInterestTags,
@@ -43,5 +62,6 @@ export function useRegisterInterests() {
     removeInterestTag,
     toggleInterestTag,
     fetchInterests,
+    addInterestByName,
   }
 }

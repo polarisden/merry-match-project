@@ -27,6 +27,10 @@ export function validateStepBeforeNext(stepNumber, stepFields, formValues, cityO
     return { valid: false, message: "Passwords do not match." }
   }
 
+  if (stepNumber === 1 && strField(formValues.username).length < 6) {
+    return { valid: false, message: "Username must be at least 6 characters." }
+  }
+
   if (stepNumber === 1 && strField(formValues.password).length < 8) {
     return { valid: false, message: "Password must be at least 8 characters." }
   }
@@ -42,6 +46,9 @@ export function validateSubmitBeforeRegister(formValues, selectedPhotos) {
   if (!strField(formValues.name)) return { valid: false, message: "Please enter your name." }
   if (!strField(formValues.dateOfBirth)) return { valid: false, message: "Please select your date of birth." }
   if (!strField(formValues.username)) return { valid: false, message: "Please enter your username." }
+  if (strField(formValues.username).length < 6) {
+    return { valid: false, message: "Username must be at least 6 characters." }
+  }
   if (!strField(formValues.email)) return { valid: false, message: "Please enter your email." }
   if (!isValidEmail(strField(formValues.email))) {
     return { valid: false, message: "Please enter a valid email address." }
@@ -64,6 +71,10 @@ export function validateSubmitBeforeRegister(formValues, selectedPhotos) {
   }
   if (!strField(formValues.meetingInterest)) {
     return { valid: false, message: "Please select your meeting interest." }
+  }
+  if (!strField(formValues.bio)) return { valid: false, message: "Please enter about me." }
+  if (strField(formValues.bio).length > 150) {
+    return { valid: false, message: "About me must be 150 characters or less." }
   }
   if (selectedPhotos.length < 2) return { valid: false, message: "Please upload at least 2 photos." }
 
