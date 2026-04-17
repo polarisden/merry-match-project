@@ -1,6 +1,6 @@
 <template>
   <div
-    class="flex flex-col mt-[52px] lg:flex-row gap-[20px] lg:gap-[22px] lg:justify-center lg:pt-[80px] lg:px-0"
+    class="flex flex-col lg:flex-row gap-[20px] lg:gap-[22px] lg:justify-center lg:py-[80px] lg:px-0"
   >
     <!--
       Initial plan load:

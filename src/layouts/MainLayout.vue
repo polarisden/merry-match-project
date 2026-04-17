@@ -1,17 +1,8 @@
 <template>
-  <Navbar />
-
-  <!-- เนื้อหาของแต่ละหน้า -->
-  <div class="flex flex-col min-h-screen">
-    <main class="flex-1">
+  <!-- Shared app chrome (Navbar/Footer) is provided by App.vue -->
+  <div class="flex flex-col min-h-dvh">
+    <main class="flex-1 min-w-0">
       <slot />
     </main>
-
-    
   </div>
 </template>
-
-<script setup>
-import Navbar from '../components/landing/Navbar.vue'
-
-</script>

@@ -1,6 +1,6 @@
 <template>
   <div
-    class="bg-bg-main w-full flex flex-col mt-[52px] lg:mt-[88px] px-[16px] py-[40px] gap-[43px] lg:px-[160px] lg:pt-[80px] lg:pb-[160px] lg:gap-[80px]"
+    class="bg-bg-main w-full flex flex-col px-[16px] py-[40px] gap-[43px] lg:px-[160px] lg:pt-[80px] lg:pb-[160px] lg:gap-[80px]"
   >
     <header class="flex flex-col gap-[8px]">
       <p class="tagline text-beige-700">MERRY MEMBERSHIP</p>
@@ -45,9 +45,6 @@
       </template>
     </div>
     <p v-if="error" class="body2 text-red-500">{{ error }}</p>
-    <div>
-      Footer
-    </div>
   </div>
 </template>
 

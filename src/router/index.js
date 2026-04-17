@@ -14,17 +14,17 @@ import AdminSideBar from '@/views/admin/AdminSideBar.vue'
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    { path: '/', component: HomePage },
+    { path: '/', component: HomePage, meta: { useOwnChrome: true } },
     { path: '/test', component: TestPage },
     { path: '/api-health', component: ApiHealthPage },
-    { path: '/Register', component: RegisterPage },
+    { path: '/Register', component: RegisterPage, meta: { hideFooter: true } },
     {
       path: '/profile',
       children: [
         {
           path: 'preview',
           name: 'preview-profile',
-          component: () => import('@/views/profile/MyPreviewProfilePage.vue'),
+          component: () => import('@/views/profile/MyPreviewProfilePage.vue'), meta: { hideFooter: true }
         },
         {
           path: 'edit',
@@ -33,16 +33,16 @@ const router = createRouter({
         } 
       ]
     },
-    { path: '/Login', component: LoginPage },
+    { path: '/Login', component: LoginPage , meta: { hideFooter: true } },
     { path: '/report', component: ReportPage },
     {
       path: '/admin',
-      meta: { requiresAdmin: true }, //เฉพาะ admin ที่เข้า path นี้ได้
+      meta: { requiresAdmin: true, useOwnChrome: true }, //เฉพาะ admin ที่เข้า path นี้ได้
       component: AdminSideBar,
       children: [
         {
           path: '',
-          redirect: '/admin/complaints',
+          redirect: '/admin/packages',
         },
         {
           path: 'packages',
@@ -61,7 +61,7 @@ const router = createRouter({
         },
       ],
     },
-    { path: '/matching', component: MatchingPage },
+    { path: '/matching', component: MatchingPage, meta: { hideFooter: true }  },
     {
       path: '/merry-list',
       name: 'merry-list',
