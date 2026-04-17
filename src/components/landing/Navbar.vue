@@ -53,7 +53,7 @@
           <!-- Menu (Mobile Dropdown) -->
           <div class="text-gray-700 body4 space-y-2">
 
-            <RouterLink to="/profile/preview" @click="closeMenu"
+            <RouterLink to="/profile/edit" @click="closeMenu"
               class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg">
               <Profile class="w-4 h-4" />
               <span>Profile</span>
@@ -144,7 +144,7 @@
 
                 <!-- Menu -->
                 <div class="body4 text-gray-700 space-y-1">
-                  <RouterLink to="/profile/preview"
+                  <RouterLink to="/profile/edit"
                     class="flex items-center px-3 py-2 gap-3 hover:bg-gray-100 rounded-lg">
                     <Profile class="w-4 h-4" />
                     <span>Profile</span>
