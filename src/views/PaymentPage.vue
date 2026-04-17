@@ -49,19 +49,35 @@
           aria-live="polite"
         >
           <template v-if="planChangePreview.changeType === 'UPGRADE'">
-            <p class="body2 text-gray-700">Prorated charge today</p>
-            <p class="headline4 text-gray-900">THB {{ proratedThb }}</p>
+            <p class="body2 text-gray-700">Full charge today</p>
+            <p class="headline4 text-gray-900">THB {{ chargeTodayThb }}</p>
+            <p class="body2 text-gray-600">Your plan switches immediately after payment.</p>
           </template>
           <template v-else-if="planChangePreview.changeType === 'DOWNGRADE'">
             <p class="body2 text-gray-700">
               Plan change at end of billing period
             </p>
-            <p class="body1 text-gray-900">{{ scheduledEffectiveLabel }}</p>
-            <p class="body2 text-gray-600">No charge for this change.</p>
+            <p class="body2 text-gray-600">
+              Your downgrade will be scheduled and applied at period end.
+            </p>
           </template>
           <template v-else-if="planChangePreview.changeType === 'SAME'">
             <p class="body2 text-gray-700">
               This is already your current plan.
+            </p>
+          </template>
+          <template
+            v-if="
+              isSubscriptionChange &&
+              planChangePreview &&
+              planChangePreview.changeType !== 'SAME'
+            "
+          >
+            <p class="body2 text-gray-600">
+              Banked from current plan: {{ bankedDaysFromCurrentLabel }}
+            </p>
+            <p class="body2 text-gray-600">
+              Available on target plan: {{ bankedDaysOnTargetLabel }}
             </p>
           </template>
         </section>
@@ -90,7 +106,7 @@
               :disabled="planChangeBusy"
               @click="handleDowngrade"
             >
-              {{ planChangeBusy ? "Processing…" : "Confirm downgrade" }}
+              {{ planChangeBusy ? "Processing..." : "Confirm downgrade" }}
             </BaseButtonPrimary>
           </div>
         </div>
@@ -153,11 +169,16 @@
           class="flex flex-col border border-gray-400 bg-white rounded-[16px] px-[24px] py-[16px] gap-[8px]"
           aria-live="polite"
         >
-          <p class="body2 text-gray-700">
-            Plan change at end of billing period
+          <p class="body2 text-gray-700">Plan change at end of billing period</p>
+          <p class="body2 text-gray-600">
+            Your downgrade will be scheduled and applied at period end.
           </p>
-          <p class="body1 text-gray-900">{{ scheduledEffectiveLabel }}</p>
-          <p class="body2 text-gray-600">No charge for this change.</p>
+          <p class="body2 text-gray-600">
+            Banked from current plan: {{ bankedDaysFromCurrentLabel }}
+          </p>
+          <p class="body2 text-gray-600">
+            Available on target plan: {{ bankedDaysOnTargetLabel }}
+          </p>
         </section>
 
         <div class="flex flex-col bg-white px-[24px] py-[24px]">
@@ -176,7 +197,7 @@
               :disabled="planChangeBusy"
               @click="handleDowngrade"
             >
-              {{ planChangeBusy ? "Processing…" : "Confirm downgrade" }}
+              {{ planChangeBusy ? "Processing..." : "Confirm downgrade" }}
             </BaseButtonPrimary>
           </div>
         </div>
@@ -229,24 +250,24 @@ const isSubscriptionChange = computed(
   () => route.query.subscriptionChange === "1",
 );
 
-const proratedThb = computed(() => {
-  const s = planChangePreview.value?.proratedAmountSatang;
+const chargeTodayThb = computed(() => {
+  const s = planChangePreview.value?.chargeAmountSatang;
   if (s == null) return "—";
   return (Number(s) / 100).toFixed(2);
 });
 
-function formatDdMmYyyy(iso) {
-  if (iso == null || iso === "") return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return String(iso);
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = d.getFullYear();
-  return `${day}/${month}/${year}`;
+function formatDaysLabel(raw) {
+  const n = Number(raw ?? 0);
+  if (!Number.isFinite(n) || n <= 0) return "0 days";
+  return `${Math.floor(n)} days`;
 }
 
-const scheduledEffectiveLabel = computed(() =>
-  formatDdMmYyyy(planChangePreview.value?.scheduledEffectiveAt),
+const bankedDaysFromCurrentLabel = computed(() =>
+  formatDaysLabel(planChangePreview.value?.bankedDaysFromCurrentPlan),
+);
+
+const bankedDaysOnTargetLabel = computed(() =>
+  formatDaysLabel(planChangePreview.value?.bankedDaysAvailableOnTargetPlan),
 );
 
 const showCreditCardSection = computed(() => {

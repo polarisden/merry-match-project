@@ -21,8 +21,10 @@ api.interceptors.request.use((config) => {
 /**
  * @typedef {Object} PlanChangePreviewResponse
  * @property {'SAME'|'UPGRADE'|'DOWNGRADE'} changeType
- * @property {number} [proratedAmountSatang]
- * @property {string} [scheduledEffectiveAt] ISO — สิ้นรอบ (downgrade)
+ * @property {number} [chargeAmountSatang]
+ * @property {boolean} [immediateEffective]
+ * @property {number} [bankedDaysFromCurrentPlan]
+ * @property {number} [bankedDaysAvailableOnTargetPlan]
  */
 
 /**
@@ -51,10 +53,7 @@ export async function upgradePlanChange(planId, omiseToken) {
   return data ?? {};
 }
 
-/**
- * POST /api/subscriptions/plan-change/downgrade — 202
- * @param {string} planId
- */
+/** POST /api/subscriptions/plan-change/downgrade — schedule at period end */
 export async function downgradePlanChange(planId) {
   const { data } = await api.post("/api/subscriptions/plan-change/downgrade", {
     planId,
@@ -63,8 +62,7 @@ export async function downgradePlanChange(planId) {
 }
 
 /**
- * POST /api/subscriptions/plan-change/downgrade/cancel — 204 No Content
- * Cancels a scheduled downgrade for current user's subscription.
+ * POST /api/subscriptions/plan-change/downgrade/cancel — cancel scheduled downgrade
  */
 export async function cancelDowngradePlanChange() {
   await api.post("/api/subscriptions/plan-change/downgrade/cancel");

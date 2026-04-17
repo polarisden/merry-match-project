@@ -97,7 +97,6 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  /** Subscription มี pendingPlan (เช่น downgrade ที่รอรอบบิล) */
   pendingPlanId: {
     type: String,
     default: "",

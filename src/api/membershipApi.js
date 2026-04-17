@@ -23,6 +23,23 @@ api.interceptors.request.use((config) => {
 const DEFAULT_PACKAGE_ICON =
   "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f1/Heart_coraz%C3%B3n.svg/960px-Heart_coraz%C3%B3n.svg.png";
 
+/**
+ * @typedef {Object} BankedPlanItem
+ * @property {string} planId
+ * @property {string} planName
+ * @property {number} planPriceSatang
+ * @property {number} remainingDays
+ */
+
+/**
+ * @typedef {Object} SubscriptionDetailDto
+ * @property {{ id?: string, name: string, priceSatang?: number, descriptions?: Array<{description?: string, sortOrder?: number}> }} plan
+ * @property {{ id?: string, name?: string } | null} [pendingPlan]
+ * @property {string | null} [scheduledPlanChangeAt]
+ * @property {number} [currentPlanBankedDays]
+ * @property {BankedPlanItem[]} [bankedPlans]
+ */
+
 /** DD/MM/YYYY */
 function formatMembershipDate(iso) {
   if (iso == null || iso === "") return "—";
@@ -50,7 +67,7 @@ function descriptionsToDetailLines(descriptions) {
 
 /**
  * คืน null เมื่อยังไม่มี subscription / payload ไม่ครบ
- * SubscriptionDetailDto { plan: { name, priceSatang, descriptions } }
+ * SubscriptionDetailDto with membership + day-bank fields
  * คืน object สำหรับ UI: แพ็กเกจ (ชื่อ ราคา รายการ), วันที่, icon, paymentCard (brand, last4, วันหมดอายุ)
  */
 export function normalizeMembership(data) {
@@ -72,13 +89,24 @@ export function normalizeMembership(data) {
         }
       : null;
 
+  const cancelAtRaw = data.cancelAt;
+  const cancelledAtRaw = data.cancelledAt;
   const pendingPlan =
     data.pendingPlan && typeof data.pendingPlan === "object"
       ? data.pendingPlan
       : null;
   const scheduledRaw = data.scheduledPlanChangeAt;
-  const cancelAtRaw = data.cancelAt;
-  const cancelledAtRaw = data.cancelledAt;
+  const bankedPlans = Array.isArray(data.bankedPlans)
+    ? [...data.bankedPlans]
+        .map((item) => ({
+          planId: String(item?.planId ?? ""),
+          planName: String(item?.planName ?? ""),
+          planPriceSatang: Number(item?.planPriceSatang ?? 0),
+          remainingDays: Number(item?.remainingDays ?? 0),
+        }))
+        .filter((item) => item.planId !== "")
+        .sort((a, b) => b.planPriceSatang - a.planPriceSatang)
+    : [];
 
   return {
     ...data,
@@ -98,6 +126,8 @@ export function normalizeMembership(data) {
     scheduledPlanChangeAtDisplay: scheduledRaw
       ? formatMembershipDate(scheduledRaw)
       : "",
+    currentPlanBankedDays: Number(data.currentPlanBankedDays ?? 0),
+    bankedPlans,
     autoRenew: Boolean(data.autoRenew),
     cancelAt: cancelAtRaw ?? null,
     cancelAtDisplay: cancelAtRaw ? formatMembershipDate(cancelAtRaw) : "",

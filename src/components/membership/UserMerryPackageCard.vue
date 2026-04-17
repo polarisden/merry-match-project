@@ -66,11 +66,17 @@
             }}</span>
           </p>
           <p class="flex flex-row justify-between gap-[16px]">
-            <span class="body2 text-purple-200">{{ scheduleRowLabel }}</span>
+            <span class="body2 text-purple-200">Next billing</span>
             <span
               class="body2 text-white text-end lg:pl-[40px] min-w-0 wrap-break-word"
             >
-              {{ scheduleRowValue }}
+              {{ displayNextBilling }}
+            </span>
+          </p>
+          <p class="flex flex-row justify-between gap-[16px]">
+            <span class="body2 text-purple-200">Banked days</span>
+            <span class="body2 text-white lg:pl-[40px]">
+              {{ bankedDaysLabel }}
             </span>
           </p>
         </div>
@@ -153,35 +159,10 @@ const displayNextBilling = computed(
   () => props.merryPackage.nextBillingDate ?? "",
 );
 
-const hasPendingPlanChange = computed(() => {
-  const m = props.merryPackage;
-  return Boolean(
-    m?.pendingPlan &&
-    (m.scheduledPlanChangeAt || m.scheduledPlanChangeAtDisplay),
-  );
-});
-
-const pendingPlanLabel = computed(
-  () => props.merryPackage?.pendingPlan?.name ?? "",
-);
-
-const scheduledChangeDisplay = computed(
-  () =>
-    props.merryPackage?.scheduledPlanChangeAtDisplay?.trim() ||
-    props.merryPackage?.scheduledPlanChangeAt ||
-    "",
-);
-
-const scheduleRowLabel = computed(() => {
-  if (!hasPendingPlanChange.value) return "Next billing";
-  const name = pendingPlanLabel.value.trim();
-  return name ? `Plan changes to ${name}*` : "Plan changes";
-});
-
-const scheduleRowValue = computed(() => {
-  if (!hasPendingPlanChange.value) return displayNextBilling.value;
-  const when = String(scheduledChangeDisplay.value).trim();
-  return when || "—";
+const bankedDaysLabel = computed(() => {
+  const n = Number(props.merryPackage?.currentPlanBankedDays ?? 0);
+  if (!Number.isFinite(n) || n <= 0) return "0 days";
+  return `${Math.floor(n)} days`;
 });
 
 const rowKey = computed(
@@ -202,10 +183,6 @@ const showCancelButton = computed(
 
 const showResumeButton = computed(
   () => isActiveSubscription.value && props.merryPackage.autoRenew === false,
-);
-
-const accessUntilLabel = computed(
-  () => props.merryPackage.cancelAtDisplay || displayNextBilling.value || "—",
 );
 
 const openCancelModal = ref(false);

@@ -39,11 +39,43 @@
         You don't have an active membership yet.
       </p>
     </section>
-    <PendingPlanChangeBanner
-      :merry-package="merryPackage"
-      :action-pending="downgradeCancelPending"
-      @cancel-pending-plan-change="handleCancelPendingDowngrade"
-    />
+    <section
+      v-if="showPendingDowngradeBanner"
+      class="w-full rounded-[16px] bg-beige-100 px-[16px] py-[12px]"
+      role="status"
+    >
+      <p class="body2 text-gray-800">
+        Pending downgrade to {{ pendingPlanName }} on
+        {{ pendingPlanEffectiveDate }}.
+      </p>
+      <BaseButtonGhost
+        class="w-fit [--btn-px:0px] [--btn-py:0px] mt-[4px]"
+        :disabled="downgradeCancelPending"
+        @click="handleCancelPendingDowngrade"
+      >
+        {{ downgradeCancelPending ? "Cancelling..." : "Cancel downgrade" }}
+      </BaseButtonGhost>
+    </section>
+
+    <section
+      class="w-full border border-gray-300 rounded-[16px] p-[16px] lg:p-[24px] flex flex-col gap-[12px]"
+    >
+      <h4 class="headline4 text-gray-900">Banked plans</h4>
+      <p class="body2 text-gray-700">
+        Fallback priority is backend-selected (highest price first).
+      </p>
+      <ul v-if="bankedPlans.length > 0" class="flex flex-col gap-[8px] list-none">
+        <li
+          v-for="item in bankedPlans"
+          :key="item.planId"
+          class="flex items-center justify-between gap-[12px] body2 text-gray-800"
+        >
+          <span>{{ item.planName }}</span>
+          <span>{{ formatDays(item.remainingDays) }}</span>
+        </li>
+      </ul>
+      <p v-else class="body2 text-gray-600">No banked plans available.</p>
+    </section>
 
     <UserPaymentmethod
       :loading="loading"
@@ -66,9 +98,9 @@
 </template>
 
 <script setup>
-import PendingPlanChangeBanner from "../components/membership/PendingPlanChangeBanner.vue";
 import UserMerryPackageCard from "../components/membership/UserMerryPackageCard.vue";
 import UserMerryPackageCardSkeleton from "../components/membership/UserMerryPackageCardSkeleton.vue";
+import BaseButtonGhost from "../components/base/BaseButtonGhost.vue";
 import axios from "axios";
 import { computed, onMounted, ref } from "vue";
 import { getCurrentMembership } from "../api/membershipApi";
@@ -106,6 +138,27 @@ const canEditPaymentMethod = computed(() => {
     (String(c.last4 ?? "").trim() !== "" ||
       String(c.brand ?? "").trim() !== "");
   return active && hasCard;
+});
+
+const showPendingDowngradeBanner = computed(() => {
+  const m = merryPackage.value;
+  return Boolean(m?.pendingPlan && m?.scheduledPlanChangeAt);
+});
+
+const pendingPlanName = computed(
+  () => merryPackage.value?.pendingPlan?.name ?? "selected plan",
+);
+
+const pendingPlanEffectiveDate = computed(
+  () =>
+    merryPackage.value?.scheduledPlanChangeAtDisplay ||
+    merryPackage.value?.scheduledPlanChangeAt ||
+    "period end",
+);
+
+const bankedPlans = computed(() => {
+  const rows = merryPackage.value?.bankedPlans;
+  return Array.isArray(rows) ? rows : [];
 });
 
 function lifecycleErrorMessage(err) {
@@ -159,6 +212,12 @@ async function handleCancelPendingDowngrade() {
   } finally {
     downgradeCancelPending.value = false;
   }
+}
+
+function formatDays(raw) {
+  const n = Number(raw ?? 0);
+  if (!Number.isFinite(n) || n <= 0) return "0 days";
+  return `${Math.floor(n)} days`;
 }
 
 async function onPaymentMethodUpdated() {
