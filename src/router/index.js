@@ -3,8 +3,9 @@ import { useAuthStore } from '@/stores/auth'
 import { getMyProfile } from '@/views/profile/profileApi'
 import HomePage from '@/views/HomePage.vue'
 import TestPage from '@/views/TestPage.vue'
-import RegisterPage from '@/views/RegisterPage.vue'
+import RegisterPage from '../views/RegisterPage.vue'
 import LoginPage from '@/views/LoginPage.vue'
+import MembershipPage from '../views/MembershipPage.vue'
 import MatchingPage from '@/views/MatchingPage.vue'
 import ApiHealthPage from '@/views/ApiHealthPage.vue'
 import ReportPage from '@/views/ReportPage.vue'
@@ -29,7 +30,7 @@ const router = createRouter({
           path: 'edit',
           name: 'edit-profile',
           component: () => import('@/views/profile/EditProfilePage.vue')
-        }
+        } 
       ]
     },
     { path: '/Login', component: LoginPage },
@@ -85,6 +86,28 @@ const router = createRouter({
         return { path: '/matching', query: nextQuery }
       },
     },
+    {
+      path: '/merry-plan',
+      children: [
+        {
+          path: '',
+          name: 'merry-plan',
+          component: () => import('@/views/MerryPlanPage.vue'),
+        },
+        {
+          path: 'payment',
+          name: 'merry-plan-payment',
+          component: () => import('@/views/PaymentPage.vue'),
+        },
+        {
+          path: 'payment-success',
+          name: 'merry-plan-payment-success',
+          component: () => import('@/views/PaymentSuccessPage.vue'),
+        },
+      ],
+    },
+
+    { path: '/membership', component: MembershipPage },
   ],
 })
 
