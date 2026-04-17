@@ -8,21 +8,16 @@
       <div class="flex items-center gap-3 md:hidden">
 
         <!-- Chat -->
-        <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center">
+        <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center relative">
           <ChatIcon />
+          <span v-if="unread > 0" class="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-pink-500 rounded-full"></span>
         </div>
 
-        <!-- ✅ Bell (เฉพาะตอน login) -->
-        <div
-          v-if="isLoggedIn"
+        <!-- Bell -->
+        <div v-if="auth.isAuthenticated"
           class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center relative">
           <BellIcon />
-
-          <!-- dot -->
-          <span
-            v-if="unread > 0"
-            class="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-pink-500 rounded-full">
-          </span>
+          <span v-if="unread > 0" class="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-pink-500 rounded-full"></span>
         </div>
 
         <!-- Hamburger -->
@@ -31,112 +26,167 @@
         </button>
       </div>
 
+      <!-- ================= MOBILE DROPDOWN ================= -->
+      <div v-if="open"
+        class="md:hidden fixed left-0 right-0 top-[74px] bottom-0 bg-white px-5 py-5 shadow-lg border-t overflow-y-auto z-40">
+        <!-- ❌ ยังไม่ login -->
+        <template v-if="!auth.isAuthenticated">
+          <a href="#why" class="block py-2 text-gray-700">Why Merry Match?</a>
+          <a href="#how" class="block py-2 text-gray-700">How to Merry</a>
+
+          <RouterLink to="/login" @click="closeMenu">
+            <button class="mt-4 w-full bg-red-500 text-white py-2 rounded-full">
+              Login
+            </button>
+          </RouterLink>
+        </template>
+
+        <!-- ✅ login แล้ว -->
+        <template v-else>
+          <div class="mb-5">
+            <button
+              class="w-full body4 py-3 rounded-full text-white font-semibold text-sm bg-gradient-to-r from-[#742138] to-[#A878BF] shadow">
+              ✨ More limit Merry!
+            </button>
+          </div>
+
+          <!-- Menu (Mobile Dropdown) -->
+          <div class="text-gray-700 body4 space-y-2">
+
+            <RouterLink to="/profile/preview" @click="closeMenu"
+              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg">
+              <Profile class="w-4 h-4" />
+              <span>Profile</span>
+            </RouterLink>
+
+            <RouterLink to="/merry-list" @click="closeMenu"
+              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg">
+              <Heart class="text-pink-100 w-4 h-4" />
+              <span>Merry list</span>
+            </RouterLink>
+
+            <RouterLink to="/membership" @click="closeMenu"
+              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg">
+              <Package class="w-4 h-4" />
+              <span>Merry Membership</span>
+            </RouterLink>
+
+            <RouterLink to="/report" @click="closeMenu"
+              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg">
+              <Compliant class="w-4 h-4" />
+              <span>Compliant</span>
+            </RouterLink>
+
+          </div>
+
+          <div class="border-t my-2"></div>
+
+          <div @click="handleLogout" class="flex items-center px-3 py-3 gap-3 cursor-pointer">
+            <Logout class=" w-4 h-4" />
+            <span class="text-gray-700 body4">Log out</span>
+          </div>
+        </template>
+      </div>
+
       <!-- ================= DESKTOP ================= -->
       <div class="hidden md:flex items-center gap-8 text-sm font-medium">
 
-        <a href="#why" class="text-gray-700 hover:text-pink-500">
-          Why Merry Match?
-        </a>
-        <a href="#how" class="text-gray-700 hover:text-pink-500">
-          How to Merry
-        </a>
-
         <!-- ❌ ยังไม่ login -->
-        <button
-          v-if="!isLoggedIn"
-          class="bg-red-500 hover:bg-red-700 text-white px-5 py-2 rounded-full">
-          Login
-        </button>
+        <template v-if="!auth.isAuthenticated">
+          <a href="#why" class="font-[Nunito] font-bold text-[16px] text-red-700 hover:text-pink-500">
+            Why Merry Match?
+          </a>
+          <a href="#how" class="font-[Nunito] font-bold text-[16px] text-red-700 hover:text-pink-500">
+            How to Merry
+          </a>
+
+          <RouterLink to="/login">
+            <button
+              class="font-[Nunito] font-bold text-[16px] bg-red-500 hover:bg-red-700 text-white px-5 py-2 rounded-full">
+              Login
+            </button>
+          </RouterLink>
+        </template>
 
         <!-- ✅ login แล้ว -->
-        <div v-else class="flex items-center gap-4">
+        <template v-else>
+          <RouterLink to="/matching" class="font-[Nunito] font-bold text-[16px] text-red-700 hover:text-pink-500">
+            Start Matching!
+          </RouterLink>
 
-          <!-- Bell -->
-          <div class="relative w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
-            <BellIcon />
-            <span
-              v-if="unread > 0"
-              class="absolute top-1 right-1 w-2 h-2 bg-pink-500 rounded-full">
-            </span>
-          </div>
+          <RouterLink to="/membership" class="font-[Nunito] font-bold text-[16px] text-red-700 hover:text-pink-500">
+            Merry Membership
+          </RouterLink>
 
-          <!-- Profile -->
-          <div class="w-8 h-8 rounded-full bg-gray-300 overflow-hidden">
-            <img :src="profileImage" class="w-full h-full object-cover" />
+          <div class="flex items-center gap-4">
+
+            <!-- Bell -->
+            <div class="relative w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+              <BellIcon />
+              <span v-if="unread > 0" class="absolute top-1 right-1 w-2 h-2 bg-pink-500 rounded-full"></span>
+            </div>
+
+            <!-- Profile -->
+            <div class="relative">
+              <div @click="toggleProfile" class="w-8 h-8 rounded-full bg-gray-300 overflow-hidden cursor-pointer">
+                <img :src="profileImage" class="w-full h-full object-cover" />
+              </div>
+
+              <!-- Dropdown -->
+              <div v-if="profileOpen" class="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-lg border p-4 z-50">
+                <!-- Gradient Button -->
+                <div class="mb-4">
+                  <button
+                    class="w-full body4 py-3 rounded-full text-white font-semibold text-sm bg-gradient-to-r from-[#742138] to-[#A878BF] shadow">
+                    ✨ More limit Merry!
+                  </button>
+                </div>
+
+                <!-- Menu -->
+                <div class="body4 text-gray-700 space-y-1">
+                  <RouterLink to="/profile/preview"
+                    class="flex items-center px-3 py-2 gap-3 hover:bg-gray-100 rounded-lg">
+                    <Profile class="w-4 h-4" />
+                    <span>Profile</span>
+                  </RouterLink>
+
+                  <RouterLink to="/merry-list" class="flex items-center px-3 py-2 gap-3 hover:bg-gray-100 rounded-lg">
+                    <Heart class="text-pink-100 w-4 h-4" />
+                    <span>Merry list</span>
+                  </RouterLink>
+
+                  <RouterLink to="/membership" class="flex items-center px-3 py-2 gap-3 hover:bg-gray-100 rounded-lg">
+                    <Package class="w-4 h-4" />
+                    <span>Merry Membership</span>
+                  </RouterLink>
+
+                  <RouterLink to="/report" class="flex items-center px-3 py-2 gap-3 hover:bg-gray-100 rounded-lg">
+                    <Compliant class="w-4 h-4" />
+                    <span>Compliant</span>
+                  </RouterLink>
+                </div>
+
+                <div class="border-t my-3"></div>
+
+                <!-- Logout -->
+                <div @click="handleLogout"
+                  class="flex items-center px-3 py-2 gap-3 hover:bg-gray-100 rounded-lg cursor-pointer">
+                  <Logout class="w-4 h-4" />
+                  <span class="text-gray-700 body4">Log out</span>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </template>
+
       </div>
     </div>
-
-    <!-- ================= DROPDOWN ================= -->
-    <div
-      v-if="open"
-      class="md:hidden absolute top-full left-0 w-full bg-white px-5 py-5 shadow-lg border-t">
-
-      <!-- ❌ ยังไม่ login -->
-      <template v-if="!isLoggedIn">
-        <a href="#why" class="block py-2 text-gray-700">Why Merry Match?</a>
-        <a href="#how" class="block py-2 text-gray-700">How to Merry</a>
-
-        <button
-          class="mt-4 w-full bg-red-500 hover:bg-pink-500 text-white py-2 rounded-full">
-          Login
-        </button>
-      </template>
-
-      <!-- ✅ login แล้ว (เหมือนรูป) -->
-      <template v-else>
-
-        <!-- Gradient Button -->
-        <div class="mb-5">
-          <button
-            class="w-full py-3 rounded-full text-white font-semibold text-sm
-                   bg-gradient-to-r from-[#7B1E3A] to-[#A855F7] shadow">
-            ✨ More limit Merry!
-          </button>
-        </div>
-
-        <!-- Menu -->
-        <div class="space-y-4 text-gray-600">
-
-          <div class="flex items-center gap-3">
-            <img :src="Profile" class="text-pink-400>">
-            <span>Profile</span>
-          </div>
-
-          <div class="flex items-center gap-3">
-            <img :src="Heart" class="text-pink-400>">
-            <span>Merry list</span>
-          </div>
-
-          <div class="flex items-center gap-3">
-            <img :src="Package" class="text-pink-400>">
-            <span>Merry Membership</span>
-          </div>
-
-          <div class="flex items-center gap-3">
-            <img :src="Compliant" class="text-pink-400>">
-            <span>Compliant</span>
-          </div>
-        </div>
-
-        <!-- Divider -->
-        <div class="border-t my-5"></div>
-
-        <!-- Logout -->
-        <div class="flex items-center gap-3 text-gray-500">
-          <img :src="Logout">
-          <span>Log out</span>
-        </div>
-
-      </template>
-    </div>
-
   </nav>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useAuthStore } from '@/stores/auth'
 
 import Logo from '@/assets/icons/logo.svg'
 import ChatIcon from '@/assets/icons/chatnavbar.svg'
@@ -148,14 +198,33 @@ import Heart from '@/assets/icons/heart.svg'
 import Profile from '@/assets/icons/profile.svg'
 import Package from '@/assets/icons/package.svg'
 
-// state
+const auth = useAuthStore()
+
 const open = ref(false)
-const isLoggedIn = ref(false) // 🔥 เปลี่ยน false เพื่อ test
-const unread = ref(2)
+const profileOpen = ref(false)
+const unread = ref(0)
 
 const profileImage = ref('https://i.pravatar.cc/100')
 
 const toggleMenu = () => {
   open.value = !open.value
 }
+
+const toggleProfile = () => {
+  profileOpen.value = !profileOpen.value
+}
+
+const closeMenu = () => {
+  open.value = false
+}
+
+const handleLogout = () => {
+  auth.clearToken()
+  profileOpen.value = false
+  open.value = false
+}
+
+onMounted(() => {
+  auth.hydrate()
+})
 </script>

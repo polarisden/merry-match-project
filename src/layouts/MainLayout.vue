@@ -7,11 +7,11 @@
       <slot />
     </main>
 
-    <Footer />
+    
   </div>
 </template>
 
 <script setup>
 import Navbar from '../components/landing/Navbar.vue'
-import Footer from '../components/landing/Footer.vue'
+
 </script>

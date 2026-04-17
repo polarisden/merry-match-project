@@ -1,5 +1,5 @@
 <template>
-    <footer class="bg-[#f5f6fa] text-center pt-6 pb-6 border-t border-t-black">
+    <footer class="bg-[#f5f6fa] text-center pt-6 pb-6 border-t">
 
         <!-- Logo -->
         <div class="flex justify-center">

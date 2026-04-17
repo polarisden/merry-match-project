@@ -298,10 +298,12 @@
 
     </div>
   </MainLayout>
+<Footer/>
 </template>
 
 <script setup>
 import MainLayout from '@/layouts/MainLayout.vue'
+import Footer from '@/components/landing/Footer.vue'
 import person1 from '@/assets/icons/person-1.jpg'
 import person2 from '@/assets/icons/person-2.jpg'
 import person3 from '@/assets/icons/person-3.jpg'
