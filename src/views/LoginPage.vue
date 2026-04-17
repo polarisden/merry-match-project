@@ -3,6 +3,9 @@ import { ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { apiUrl } from "@/lib/apiBase"
 import { useAuthStore } from "@/stores/auth"
+import MainLayout from "@/layouts/MainLayout.vue"
+import Navbar from "@/components/landing/Navbar.vue"
+
 
 const router = useRouter()
 const route = useRoute()
@@ -121,34 +124,24 @@ async function submitLogin() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-200 flex justify-start lg:justify-center">
-    <div class="w-full max-w-[390px] lg:max-w-[1200px] mx-auto px-4 pt-6 pb-10 lg:px-10 lg:pt-12 lg:pb-16">
-      <div class="lg:grid lg:grid-cols-[420px_1fr] lg:items-center lg:gap-x-[130px]">
-        <div class="flex justify-center lg:justify-start lg:w-[450px]">
-          <img
-            :src="loginImage"
-            alt="Login illustration"
-            class="w-[177px] h-[266px] lg:w-[450px] lg:h-[677px] rounded-full object-cover"
-          />
-        </div>
+  <MainLayout>
+    <div class="min-h-screen bg-gray-200 flex justify-start lg:justify-center">
+      <div class="w-full max-w-[390px] lg:max-w-[1200px] mx-auto px-4 pt-6 pb-10 lg:px-10 lg:pt-12 lg:pb-16">
+        <div class="lg:grid lg:grid-cols-[420px_1fr] lg:items-center lg:gap-x-[130px]">
+          <div class="flex justify-center lg:justify-start lg:w-[450px]">
+            <img :src="loginImage" alt="Login illustration"
+              class="w-[177px] h-[266px] lg:w-[450px] lg:h-[677px] rounded-full object-cover" />
+          </div>
 
-        <img
-          :src="ellipse2Icon"
-          alt=""
-          aria-hidden="true"
-          class="hidden lg:block fixed left-0 top-[86px] w-[81px] h-[100px] pointer-events-none select-none z-10"
-        />
-        <img
-          :src="ellipse3Icon"
-          alt=""
-          aria-hidden="true"
-          class="hidden lg:block fixed left-[80px] top-[210px] w-2 h-2 pointer-events-none select-none z-10"
-        />
+          <img :src="ellipse2Icon" alt="" aria-hidden="true"
+            class="hidden lg:block fixed left-0 top-[86px] w-[81px] h-[100px] pointer-events-none select-none z-10" />
+          <img :src="ellipse3Icon" alt="" aria-hidden="true"
+            class="hidden lg:block fixed left-[80px] top-[210px] w-2 h-2 pointer-events-none select-none z-10" />
 
-        <div class="mt-7 lg:mt-0 lg:max-w-[343px]">
-          <p class="text-[14px] tracking-wide uppercase text-beige-700 tagline">
-            Login
-          </p>
+          <div class="mt-7 lg:mt-0 lg:max-w-[343px]">
+            <p class="text-[14px] tracking-wide uppercase text-beige-700 tagline">
+              Login
+            </p>
 
           <h1 class="mt-2 text-purple-500 text-[42px] leading-[1.03] headline3 tracking-[-0.02em]">
             Welcome back to
@@ -231,4 +224,5 @@ async function submitLogin() {
       </div>
     </div>
   </div>
+</MainLayout>
 </template>
