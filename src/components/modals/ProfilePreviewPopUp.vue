@@ -43,7 +43,12 @@ const {
 watch(
   () => props.open,
   (isOpen) => {
-    if (isOpen) loadPreview()
+    if (isOpen) {
+      loadPreview({
+        userId: props.targetUserId,
+        fallbackPhotoUrl: props.fallbackPhotoUrl,
+      })
+    }
   },
   { immediate: true },
 )
@@ -73,7 +78,7 @@ watch(
 
       <button
         type="button"
-        class="absolute right-4 top-4 z-60 flex h-10 w-10 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+        class="absolute right-4 top-4 z-60 flex h-10 w-10 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 hover:cursor-pointer"
         aria-label="Close profile preview"
         @click="emit('close')"
       >

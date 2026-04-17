@@ -1,5 +1,4 @@
 <template>
-  <div class="h-[52px] w-full border-b">nav</div>
   <div
     class="bg-white w-full flex flex-col px-[16px] py-[40px] gap-[43px] lg:gap-[60px] lg:px-[160px] lg:pt-[80px] lg:pb-0"
   >
@@ -94,7 +93,6 @@
     :next-billing-date="merryPackage?.nextBillingDate ?? ''"
   />
 
-  <div class="h-[345px] w-full border-t">footer</div>
 </template>
 
 <script setup>

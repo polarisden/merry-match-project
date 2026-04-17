@@ -115,9 +115,15 @@ export function useProfilePreviewData() {
     }
   })
 
-  async function loadPreview() {
+  /**
+   * Loads either current user's profile (default) or a target user's profile when `userId` is provided.
+   * @param {{ userId?: string, fallbackPhotoUrl?: string }} [opts]
+   */
+  async function loadPreview(opts = {}) {
     loading.value = true
     loadError.value = ""
+    const targetUserId = typeof opts.userId === "string" ? opts.userId.trim() : ""
+    const fallbackPhotoUrl = typeof opts.fallbackPhotoUrl === "string" ? opts.fallbackPhotoUrl.trim() : ""
     const token = localStorage.getItem("token") ?? ""
     if (!token) {
       loadError.value = "Please log in to view profiles."
@@ -127,10 +133,14 @@ export function useProfilePreviewData() {
       return
     }
     try {
-      const [p, rawImages] = await Promise.all([
-        getMyProfile(token),
-        listMyProfileImages(token).catch(() => []),
-      ])
+      const [p, rawImages] = await Promise.all(
+        targetUserId
+          ? [
+              getUserProfile(targetUserId, token),
+              listUserProfileImages(targetUserId, token).catch(() => []),
+            ]
+          : [getMyProfile(token), listMyProfileImages(token).catch(() => [])],
+      )
       profile.value = p
       if (targetUserId) {
         const sorted = sortProfileImagesForDisplay(Array.isArray(rawImages) ? rawImages : [])
