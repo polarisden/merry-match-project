@@ -18,13 +18,18 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export async function getPaymentMethodFromApi() {
-  // backend should return the user's saved payment method (authenticated)
-  const { data } = await api.get("/api/payment-method");
-  return data;
+/**
+ * POST /api/subscriptions/cancel — หยุดต่ออายุ (ใช้สิทธิ์ถึง cancelAt / สิ้นรอบ)
+ * 204 No Content
+ */
+export async function cancelSubscription() {
+  await api.post("/api/subscriptions/cancel");
 }
 
-export async function getPaymentMethod() {
-  return getPaymentMethodFromApi();
+/**
+ * POST /api/subscriptions/resume — เปิด auto-renew ก่อนสิ้นรอบ
+ * 204 No Content
+ */
+export async function resumeSubscription() {
+  await api.post("/api/subscriptions/resume");
 }
-

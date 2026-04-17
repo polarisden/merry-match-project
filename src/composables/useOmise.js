@@ -1,26 +1,22 @@
 import { ref } from "vue";
-import { getOmiseConfig } from "../api/planApi";
 
 const OMISE_SCRIPT_SRC = "https://cdn.omise.co/omise.js";
+const OMISE_PUBLIC_KEY = String(import.meta.env.VITE_OMISE_PUBLIC_KEY || "");
 
 /** @type {Promise<typeof window.Omise> | null} */
 let loadPromise = null;
 
 /**
- * Omise.js: `Omise.createToken({ card })` returns a one-time token id
- * (often `tokn_test_…` / `tokn_live_…` in newer APIs — send as `omiseToken` to backend).
+ * Omise.js: `Omise.createToken("card", tokenParameters, cb)` returns a one-time token id
+ * (often `tokn_test_…` / `tokn_live_…` — send as `omiseToken` to backend).
+ * There is no tokenParameters flag to restrict to Visa/Mastercard; enforce card brand in your form
+ * or on the server. Account-level supported brands are in the Omise Dashboard / Capability API;
+ * charging an unsupported brand can return e.g. `brand_not_supported`.
  * Never send raw card data to your server.
  */
 
 async function resolvePublicKey() {
-  const fromEnv = import.meta.env.VITE_OMISE_PUBLIC_KEY;
-  if (fromEnv) return String(fromEnv);
-  try {
-    const cfg = await getOmiseConfig();
-    return cfg?.publicKey ? String(cfg.publicKey) : "";
-  } catch {
-    return "";
-  }
+  return OMISE_PUBLIC_KEY;
 }
 
 /**
@@ -73,7 +69,7 @@ export async function ensureOmise() {
  * @param {number} card.expiration_year 4 digits (e.g. 2026)
  * @param {string} card.security_code
  * @returns {Promise<{ id: string }>}
- * @see https://www.omise.co/omise-js — createToken("card", tokenParameters, callback)
+ * @see https://www.omise.co/omise-js
  */
 export async function createOmiseCardToken(card) {
   const Omise = await ensureOmise();

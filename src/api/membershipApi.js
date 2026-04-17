@@ -66,11 +66,19 @@ export function normalizeMembership(data) {
     rawCard && typeof rawCard === "object"
       ? {
           brand: String(rawCard.brand ?? ""),
-          last4: String(rawCard.lastDigits ?? ""),
-          expMonth: rawCard.expirationMonth ?? "",
-          expYear: rawCard.expirationYear ?? "",
+          last4: String(rawCard.lastDigits ?? rawCard.last4 ?? ""),
+          expMonth: rawCard.expirationMonth ?? rawCard.expMonth ?? "",
+          expYear: rawCard.expirationYear ?? rawCard.expYear ?? "",
         }
       : null;
+
+  const pendingPlan =
+    data.pendingPlan && typeof data.pendingPlan === "object"
+      ? data.pendingPlan
+      : null;
+  const scheduledRaw = data.scheduledPlanChangeAt;
+  const cancelAtRaw = data.cancelAt;
+  const cancelledAtRaw = data.cancelledAt;
 
   return {
     ...data,
@@ -80,10 +88,23 @@ export function normalizeMembership(data) {
     price: plan.priceSatang ?? 0,
     packageDetail: descriptionsToDetailLines(plan.descriptions),
     icon: DEFAULT_PACKAGE_ICON,
+    subscriptionStatusRaw: String(data.status ?? ""),
     status: formatStatusLabel(data.status),
     startDate: formatMembershipDate(data.currentPeriodStart),
     nextBillingDate: formatMembershipDate(data.nextBillingDate),
     paymentCard,
+    pendingPlan,
+    scheduledPlanChangeAt: scheduledRaw ?? null,
+    scheduledPlanChangeAtDisplay: scheduledRaw
+      ? formatMembershipDate(scheduledRaw)
+      : "",
+    autoRenew: Boolean(data.autoRenew),
+    cancelAt: cancelAtRaw ?? null,
+    cancelAtDisplay: cancelAtRaw ? formatMembershipDate(cancelAtRaw) : "",
+    cancelledAt: cancelledAtRaw ?? null,
+    cancelledAtDisplay: cancelledAtRaw
+      ? formatMembershipDate(cancelledAtRaw)
+      : "",
   };
 }
 

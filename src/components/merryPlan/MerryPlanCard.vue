@@ -8,11 +8,21 @@
       </template>
 
       <template v-else>
-        <div v-if="isCurrent" class="absolute right-[16px] top-[16px]">
+        <div
+          v-if="isCurrent || isPendingTarget"
+          class="absolute right-[16px] top-[16px] flex flex-col items-end gap-[6px]"
+        >
           <span
+            v-if="isCurrent"
             class="py-[4px] px-[12px] bg-beige-200 rounded-full text-beige-600 body3"
           >
             Current plan
+          </span>
+          <span
+            v-if="isPendingTarget"
+            class="py-[4px] px-[12px] bg-beige-200 rounded-full text-beige-600 body3"
+          >
+            Upcoming plan
           </span>
         </div>
         <div
@@ -55,14 +65,18 @@
       </template>
     </div>
     <div class="flex flex-col w-full pt-[16px] border-t border-gray-300">
-    <BaseButtonSecondary :disabled="loading || isCurrent" @click="onSelect">
-      {{ isCurrent ? "Current plan" : "Choose Plan" }}
-    </BaseButtonSecondary>
-  </div>
+      <BaseButtonSecondary
+        :disabled="loading || isCurrent || isPendingTarget"
+        @click="onSelect"
+      >
+        {{ primaryActionLabel }}
+      </BaseButtonSecondary>
+    </div>
   </article>
 </template>
 
 <script setup>
+import { computed } from "vue";
 import BaseButtonSecondary from "../base/BaseButtonSecondary.vue";
 import SuccessIcon from "@/assets/icons/success.svg";
 import MerryPlanCardSkeleton from "./MerryPlanCardSkeleton.vue";
@@ -83,6 +97,31 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  /** Subscription มี pendingPlan (เช่น downgrade ที่รอรอบบิล) */
+  pendingPlanId: {
+    type: String,
+    default: "",
+  },
+  scheduledPlanChangeDisplay: {
+    type: String,
+    default: "",
+  },
+});
+
+const isPendingTarget = computed(
+  () =>
+    props.pendingPlanId !== "" &&
+    props.merryPlan != null &&
+    String(props.merryPlan.id) === props.pendingPlanId,
+);
+
+const primaryActionLabel = computed(() => {
+  if (props.isCurrent) return "Current plan";
+  if (isPendingTarget.value) {
+    const d = props.scheduledPlanChangeDisplay.trim();
+    return d ? `Starts ${d}` : "Scheduled";
+  }
+  return "Choose Plan";
 });
 
 /**
@@ -100,7 +139,7 @@ function formatPriceBaht(plan) {
 }
 
 function onSelect() {
-  if (props.loading || !props.merryPlan) return;
+  if (props.loading || !props.merryPlan || isPendingTarget.value) return;
   emit("select", props.merryPlan);
 }
 </script>

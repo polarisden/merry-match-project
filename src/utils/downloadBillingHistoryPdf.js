@@ -13,7 +13,7 @@ function formatBilledAtForPdf(iso) {
 }
 
 /**
- * @param {{ nextBillingDate: string, rows: Array<{ billedAt: string, planName: string, amountSatang: number, status: string }> }} billing
+ * @param {{ nextBillingDate: string, rows: Array<{ billedAt: string, planName: string, amountSatang: number }> }} billing
  */
 export function downloadBillingHistoryPdf(billing) {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -27,12 +27,11 @@ export function downloadBillingHistoryPdf(billing) {
     formatBilledAtForPdf(row.billedAt),
     row.planName ?? "",
     (Number(row.amountSatang ?? 0) / 100).toFixed(2),
-    row.status ?? "",
   ]);
 
   autoTable(doc, {
     startY: 30,
-    head: [["Date", "Plan", "Amount (THB)", "Status"]],
+    head: [["Date", "Plan", "Amount (THB)"]],
     body,
     styles: { fontSize: 10, cellPadding: 3 },
     headStyles: { fillColor: [66, 66, 66], textColor: 255 },

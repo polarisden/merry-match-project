@@ -18,13 +18,14 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-export async function getPaymentMethodFromApi() {
-  // backend should return the user's saved payment method (authenticated)
-  const { data } = await api.get("/api/payment-method");
+/**
+ * POST /api/subscriptions/payment-method — แนบบัตรใหม่ (Omise token เท่านั้น)
+ * @param {string} omiseToken e.g. tokn_test_…
+ * @returns {Promise<{ brand?: string, lastDigits?: string, expirationMonth?: number, expirationYear?: number }>}
+ */
+export async function updateSubscriptionPaymentMethod(omiseToken) {
+  const { data } = await api.post("/api/subscriptions/payment-method", {
+    omiseToken,
+  });
   return data;
 }
-
-export async function getPaymentMethod() {
-  return getPaymentMethodFromApi();
-}
-

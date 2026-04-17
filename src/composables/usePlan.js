@@ -3,15 +3,12 @@ import { useRouter } from "vue-router";
 import axios from "axios";
 import dayjs from "dayjs";
 import {
-  getOrder,
   getPlanById,
   getPlans,
   getSubscription,
-  getSubscriptionByCharge,
   sortPlansBySortOrder,
   subscriptionCheckout,
   subscriptionToSuccessPlan,
-  USE_MOCK_API,
 } from "../api/planApi";
 import { usePlanStore } from "../stores/planStore";
 import { useAuthStore } from "../stores/auth";
@@ -46,9 +43,7 @@ export function usePlan() {
   const error = ref(null);
   const plans = ref([]);
   const loadedPlan = ref(null);
-  /** Legacy mock order shape */
-  const order = ref(null);
-  /** Subscription payload from GET /api/subscriptions/:id or mock */
+  /** Subscription payload from GET /api/subscriptions/:id */
   const subscription = ref(null);
   const paying = ref(false);
 
@@ -87,9 +82,19 @@ export function usePlan() {
     store.setPlan(plan);
   }
 
-  function goToPaymentWithPlan(plan) {
+  /**
+   * @param {object} plan
+   * @param {{ subscriptionChange?: boolean }} [options] — true = เปลี่ยนแผน (มี membership) → PaymentPage เรียก preview
+   */
+  function goToPaymentWithPlan(plan, options = {}) {
     setSelectedPlan(plan);
-    router.push(`/merry-plan/payment?planId=${encodeURIComponent(plan.id)}`);
+    const params = new URLSearchParams({
+      planId: String(plan.id),
+    });
+    if (options.subscriptionChange) {
+      params.set("subscriptionChange", "1");
+    }
+    router.push(`/merry-plan/payment?${params.toString()}`);
   }
 
   /**
@@ -117,8 +122,6 @@ export function usePlan() {
       const res = await subscriptionCheckout(String(selectedPlan.value.id), {
         omiseToken,
       });
-
-      console.log(res)
 
       if (res.status === "pending" && res.authorizeUri) {
         window.location.href = res.authorizeUri;
@@ -154,21 +157,18 @@ export function usePlan() {
 
   /**
    * Success page:
-   * - subscriptionId: GET /api/subscriptions/:id (real) หรือ mock map — มี plan + วันที่รอบบิลครบ
-   * - planId only (real): fallback GET /api/plans/:id เมื่อไม่มี subscriptionId ใน URL
-   * - Mock: chargeId / orderId / planId ตามเดิม
+   * - subscriptionId: GET /api/subscriptions/:id
+   * - planId only: fallback GET /api/plans/:id เมื่อไม่มี subscriptionId ใน URL
    */
   async function fetchSubscriptionFromRoute(route) {
     try {
       loading.value = true;
       error.value = null;
-      order.value = null;
       subscription.value = null;
 
       const planId = route.query.planId;
       const subscriptionId = route.query.subscriptionId;
       const chargeId = route.query.chargeId;
-      const legacyOrderId = route.query.orderId;
 
       if (typeof subscriptionId === "string" && subscriptionId) {
         subscription.value = await getSubscription(subscriptionId);
@@ -176,7 +176,7 @@ export function usePlan() {
         return;
       }
 
-      if (!USE_MOCK_API && typeof planId === "string" && planId) {
+      if (typeof planId === "string" && planId) {
         const plan = await getPlanById(planId);
         subscription.value = {
           subscriptionId: null,
@@ -188,40 +188,7 @@ export function usePlan() {
         return;
       }
 
-      if (USE_MOCK_API && typeof chargeId === "string" && chargeId) {
-        try {
-          subscription.value = await getSubscriptionByCharge(chargeId);
-        } catch {
-          subscription.value = {
-            id: null,
-            chargeId,
-            status: "pending",
-            plan: null,
-          };
-        }
-        store.clearPlan();
-        return;
-      }
-
-      if (typeof legacyOrderId === "string" && legacyOrderId && USE_MOCK_API) {
-        order.value = await getOrder(legacyOrderId);
-        store.clearPlan();
-        return;
-      }
-
-      if (USE_MOCK_API && typeof planId === "string" && planId) {
-        const plan = await getPlanById(planId);
-        subscription.value = {
-          subscriptionId: null,
-          chargeId: typeof chargeId === "string" ? chargeId : null,
-          status: "paid",
-          plan,
-        };
-        store.clearPlan();
-        return;
-      }
-
-      if (!USE_MOCK_API && typeof chargeId === "string" && chargeId) {
+      if (typeof chargeId === "string" && chargeId) {
         subscription.value = {
           subscriptionId: null,
           chargeId,
@@ -233,9 +200,7 @@ export function usePlan() {
       }
 
       throw new Error(
-        USE_MOCK_API
-          ? "Missing subscriptionId, chargeId, orderId, or planId"
-          : "Missing subscriptionId, planId, or chargeId",
+        "Missing subscriptionId, planId, or chargeId",
       );
     } catch (err) {
       error.value = err instanceof Error ? err.message : "Failed to load subscription";
@@ -260,15 +225,7 @@ export function usePlan() {
       };
     }
 
-    if (!order.value?.plan) return null;
-    const createdAt = order.value.createdAt ? dayjs(order.value.createdAt) : dayjs();
-    return {
-      ...order.value.plan,
-      startDate: order.value.plan.startDate || createdAt.format("DD/MM/YYYY"),
-      nextBillingDate:
-        order.value.plan.nextBillingDate ||
-        createdAt.add(1, "month").format("DD/MM/YYYY"),
-    };
+    return null;
   });
 
   function clearPlan() {
@@ -279,7 +236,6 @@ export function usePlan() {
     loading,
     error,
     plans,
-    order,
     subscription,
     selectedPlan,
     successPlan,

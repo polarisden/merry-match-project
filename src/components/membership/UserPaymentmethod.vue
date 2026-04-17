@@ -1,12 +1,12 @@
 <template>
-  <article class="flex flex-col gap-[24px]">
+  <article class="flex flex-col gap-[24px] -mt-[25px] lg:mt-0">
     <p class="headline4 text-gray-900">Payment method</p>
     <div
-      class="flex flex-col px-[32px] pt-[32px] pb-[24px] gap-[16px] border border-gray-400 rounded-[24px] bg-white"
+      class="flex flex-col p-[16px] lg:px-[32px] lg:pt-[32px] lg:pb-[24px] gap-[16px] border border-gray-400 rounded-[24px] bg-white"
     >
       <div class="flex flex-row gap-[16px] border-b border-gray-300 pb-[24px]">
         <div
-          class="w-[66px] h-[66px] bg-gray-100 rounded-[16px] flex justify-center items-center"
+          class="min-w-[66px] h-[66px] bg-gray-100 rounded-[16px] flex justify-center items-center"
         >
           <CreditCard class="w-[32px] h-[32px] text-red-200" aria-hidden="true" />
         </div>
@@ -42,10 +42,16 @@
       <div class="flex flex-row justify-end">
         <BaseButtonGhost
           class="w-fit"
-          :disabled="loading"
+          :disabled="loading || !canEditPaymentMethod"
+          :title="
+            canEditPaymentMethod
+              ? undefined
+              : 'Available when you have an active membership with a card on file'
+          "
+          type="button"
           @click="$emit('handleEditPaymentMethod')"
         >
-          Edit Payment Method
+          Edit payment method
         </BaseButtonGhost>
       </div>
     </div>
@@ -70,6 +76,11 @@ const props = defineProps({
   error: {
     type: String,
     default: "",
+  },
+  /** false = ปุ่มแก้ไขถูกปิด (เช่น ไม่มี membership active / ไม่มีบัตรใน snapshot) */
+  canEditPaymentMethod: {
+    type: Boolean,
+    default: true,
   },
 });
 

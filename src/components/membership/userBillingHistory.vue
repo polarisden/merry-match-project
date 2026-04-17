@@ -1,7 +1,7 @@
 <template>
   <article class="flex flex-col pb-[24px] mb-[88px] lg:pt-[60px] lg:px-[160px]">
     <div
-      class="flex flex-col py-[8px] lg:pb-[24px] border-b lg:border-0 border-gray-300 p-[16px]"
+      class="flex flex-col py-[8px] px-[16px] lg:px-0 lg:pb-[24px] border-b lg:border-0 border-gray-300 "
     >
       <div class="flex flex-row items-center gap-[8px]">
         <p class="headline4 text-gray-900">Billing history</p>

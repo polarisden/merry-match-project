@@ -25,6 +25,5 @@ api.interceptors.request.use((config) => {
  */
 export async function getBillingHistory() {
   const { data } = await api.get("/api/billing/history");
-  console.log("Billing History", data)
   return Array.isArray(data) ? data : [];
 }
