@@ -46,6 +46,51 @@ const peerAvatar = computed(() => peerImageUrl.value || "");
 
 const isDev = import.meta.env.DEV;
 
+function toDate(value) {
+  if (!value) return null;
+  const d = new Date(String(value));
+  return Number.isFinite(d.getTime()) ? d : null;
+}
+
+function dayKey(value) {
+  const d = toDate(value);
+  if (!d) return "";
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${dd}`;
+}
+
+function formatTime(value) {
+  const d = toDate(value);
+  if (!d) return "";
+  return new Intl.DateTimeFormat("en-En", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
+}
+
+function formatDividerDate(value) {
+  const d = toDate(value);
+  if (!d) return "";
+  return new Intl.DateTimeFormat("en-En", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  }).format(d);
+}
+
+function showDateDivider(index) {
+  if (!Array.isArray(messages.value) || index < 0 || index >= messages.value.length) return false;
+  if (index === 0) return true;
+  const prev = messages.value[index - 1];
+  const curr = messages.value[index];
+  const pk = dayKey(prev?.createdAt);
+  const ck = dayKey(curr?.createdAt);
+  if (!ck) return false;
+  return pk !== ck;
+}
+
 function onChatImagePickError(msg) {
   sendError.value = typeof msg === "string" ? msg : "Invalid image";
 }
@@ -124,49 +169,100 @@ function onSendImageDraft({ file, caption }) {
               <div class="flex flex-col">
                 <template v-for="(m, idx) in messages" :key="m.id">
                   <div :class="messageSpacingClass(idx)">
+                    <div
+                      v-if="showDateDivider(idx)"
+                      class="my-2 flex w-full items-center justify-center"
+                      role="separator"
+                      :aria-label="`Messages from ${formatDividerDate(m.createdAt)}`"
+                    >
+                      <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+                        {{ formatDividerDate(m.createdAt) }}
+                      </span>
+                    </div>
+
                     <ChatListItem
                       v-if="m.side === 'incoming'"
                       variant="incoming"
                       :avatar-src="peerAvatar"
                       :avatar-alt="`profile-pic ${contactName}`"
                     >
-                      <MessageBubble v-if="m.type === 'text'" variant="incoming">
-                        {{ m.text }}
-                      </MessageBubble>
-                      <div
-                        v-else
-                        class="flex flex-col gap-1"
-                      >
-                        <ImageMessage
-                          :src="m.imageUrl"
-                          :alt="m.alt || 'Chat image'"
-                        />
-                        <p
-                          v-if="m.text"
-                          class="inline-flex w-fit max-w-[85%] rounded-tl-[24px] rounded-tr-[24px] rounded-br-[24px] bg-purple-200 px-6 py-3 body2 leading-snug text-gray-900 wrap-break-word"
-                        >
-                          {{ m.text }}
-                        </p>
+                      <div class="flex flex-col items-start gap-1">
+                        <template v-if="m.type === 'text'">
+                          <div class="flex items-end gap-2">
+                            <MessageBubble variant="incoming">
+                              {{ m.text }}
+                            </MessageBubble>
+                            <div v-if="formatTime(m.createdAt)" class="pb-1 text-[11px] leading-none text-gray-500">
+                              {{ formatTime(m.createdAt) }}
+                            </div>
+                          </div>
+                        </template>
+                        <template v-else>
+                          <div class="flex items-end gap-2">
+                            <div class="flex flex-col gap-1">
+                              <ImageMessage
+                                :src="m.imageUrl"
+                                :alt="m.alt || 'Chat image'"
+                              />
+                              <p
+                                v-if="m.text"
+                                class="inline-flex w-fit max-w-[85%] rounded-tl-[24px] rounded-tr-[24px] rounded-br-[24px] bg-purple-200 px-6 py-3 body2 leading-snug text-gray-900 wrap-break-word"
+                              >
+                                {{ m.text }}
+                              </p>
+                            </div>
+                            <div v-if="formatTime(m.createdAt)" class="pb-1 text-[11px] leading-none text-gray-500">
+                              {{ formatTime(m.createdAt) }}
+                            </div>
+                          </div>
+                        </template>
                       </div>
                     </ChatListItem>
                     <ChatListItem v-else variant="outgoing">
-                      <MessageBubble v-if="m.type === 'text'" variant="outgoing">
-                        {{ m.text }}
-                      </MessageBubble>
-                      <div
-                        v-else
-                        class="flex flex-col items-end gap-1"
-                      >
-                        <ImageMessage
-                          :src="m.imageUrl"
-                          :alt="m.alt || 'Your chat image'"
-                        />
-                        <p
-                          v-if="m.text"
-                          class="inline-flex w-fit max-w-[85%] rounded-tl-[24px] rounded-tr-[24px] rounded-bl-[24px] bg-purple-600 px-6 py-3 body2 leading-snug text-white wrap-break-word"
-                        >
-                          {{ m.text }}
-                        </p>
+                      <div class="flex flex-col items-end gap-1">
+                        <template v-if="m.type === 'text'">
+                          <div class="flex items-end gap-2">
+                            <div
+                              v-if="formatTime(m.createdAt) || m.isRead"
+                              class="pb-1 text-[11px] leading-none text-gray-200/90"
+                              aria-live="polite"
+                            >
+                              <div class="flex flex-col items-end gap-1">
+                                <span v-if="m.isRead">Read</span>
+                                <span v-if="formatTime(m.createdAt)">{{ formatTime(m.createdAt) }}</span>
+                              </div>
+                            </div>
+                            <MessageBubble variant="outgoing">
+                              {{ m.text }}
+                            </MessageBubble>
+                          </div>
+                        </template>
+                        <template v-else>
+                          <div class="flex items-end gap-2">
+                            <div
+                              v-if="formatTime(m.createdAt) || m.isRead"
+                              class="pb-1 text-[11px] leading-none text-gray-200/90"
+                              aria-live="polite"
+                            >
+                              <div class="flex flex-col items-end gap-1">
+                                <span v-if="m.isRead">Read</span>
+                                <span v-if="formatTime(m.createdAt)">{{ formatTime(m.createdAt) }}</span>
+                              </div>
+                            </div>
+                            <div class="flex flex-col items-end gap-1">
+                              <ImageMessage
+                                :src="m.imageUrl"
+                                :alt="m.alt || 'Your chat image'"
+                              />
+                              <p
+                                v-if="m.text"
+                                class="inline-flex w-fit max-w-[85%] rounded-tl-[24px] rounded-tr-[24px] rounded-bl-[24px] bg-purple-600 px-6 py-3 body2 leading-snug text-white wrap-break-word"
+                              >
+                                {{ m.text }}
+                              </p>
+                            </div>
+                          </div>
+                        </template>
                       </div>
                     </ChatListItem>
                   </div>

@@ -156,6 +156,25 @@ export function useChatRoom(route) {
     })
   }
 
+  /** @param {ReturnType<typeof normalizeMessage>} dto */
+  function patchExistingMessage(dto) {
+    if (!dto?.id) return
+    const idx = messages.value.findIndex((m) => m.id === dto.id)
+    if (idx < 0) return
+
+    const prev = messages.value[idx]
+    const next = {
+      ...prev,
+      isRead: dto.isRead ?? prev.isRead,
+      createdAt: dto.createdAt ?? prev.createdAt,
+    }
+    if (next.isRead === prev.isRead && next.createdAt === prev.createdAt) return
+
+    const copy = messages.value.slice()
+    copy[idx] = next
+    messages.value = copy
+  }
+
   let realtimeChannel = null
   /** @type {ReturnType<typeof setInterval> | null} */
   let pollTimer = null
@@ -204,6 +223,21 @@ export function useChatRoom(route) {
           if (!row) return
           const dto = normalizeMessage(row)
           upsertIncomingMessage(dto)
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "messages",
+          filter: `chat_room_id=eq.${roomId}`,
+        },
+        (payload) => {
+          const row = payload.new
+          if (!row) return
+          const dto = normalizeMessage(row)
+          patchExistingMessage(dto)
         },
       )
       .subscribe()
