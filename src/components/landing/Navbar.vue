@@ -2,7 +2,7 @@
   <nav class="sticky top-0 z-50 bg-white border-b border-gray-200">
 
     <div class="flex items-center justify-between px-[14px] lg:px-[160px] h-[52px] lg:h-[88px]">
-      <Logo class="w-[112px] h-[38px] lg:w-[167px] lg:h-[56px]" />
+      <RouterLink to="/"><Logo class="w-[112px] h-[38px] lg:w-[167px] lg:h-[56px]" /></RouterLink>
 
       <!-- ================= MOBILE ================= -->
       <div class="flex items-center gap-3 md:hidden">
@@ -79,6 +79,12 @@
               <span>Compliant</span>
             </RouterLink>
 
+            <RouterLink v-if="isAdmin" to="/admin" @click="closeMenu"
+              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg">
+              <AdminPanel class="w-4 h-4" />
+              <span>Admin Panel</span>
+            </RouterLink>
+
           </div>
 
           <div class="border-t my-2"></div>
@@ -140,7 +146,7 @@
                 <div class="mb-4">
                   <RouterLink to="/merry-plan">
                     <button
-                      class="w-full body4 py-3 rounded-full text-white font-semibold text-sm bg-gradient-to-r from-[#742138] to-[#A878BF] shadow">
+                      class="w-full body4 py-3 rounded-full text-white font-semibold text-sm bg-gradient-to-r from-[#742138] to-[#A878BF] shadow cursor-pointer hover:scale-105">
                       ✨ More limit Merry!
                     </button>
                   </RouterLink>
@@ -167,6 +173,11 @@
                     <Compliant class="w-4 h-4" />
                     <span>Compliant</span>
                   </RouterLink>
+
+                  <RouterLink v-if="isAdmin" to="/admin" class="flex items-center px-3 py-2 gap-3 hover:bg-gray-100 rounded-lg">
+                    <AdminPanel class="w-4 h-4" />
+                    <span>Admin Panel</span>
+                  </RouterLink>
                 </div>
 
                 <div class="border-t my-3"></div>
@@ -191,7 +202,7 @@
 
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-import { apiUrl } from '@/lib/apiBase'
+import { getMyProfile } from '@/views/profile/profileApi'
 import Logo from '@/assets/icons/logo.svg'
 import ChatIcon from '@/assets/icons/chatnavbar.svg'
 import BellIcon from '@/assets/icons/bellnavbar.svg'
@@ -201,6 +212,7 @@ import Compliant from '@/assets/icons/complaint.svg'
 import Heart from '@/assets/icons/heart.svg'
 import Profile from '@/assets/icons/profile.svg'
 import Package from '@/assets/icons/package.svg'
+import AdminPanel from '@/assets/icons/admin-panel.svg'
 
 const auth = useAuthStore()
 
@@ -209,6 +221,7 @@ const profileOpen = ref(false)
 const unread = ref(0)
 
 const profileImage = ref('')
+const isAdmin = ref(false)
 
 const toggleMenu = () => {
   open.value = !open.value
@@ -234,24 +247,15 @@ const fetchProfileImage = async () => {
     const token = auth.token
     if (!token) return
 
-    const meRes = await fetch(apiUrl('/api/users/me/profile'), {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-    if (!meRes.ok) return
-    const me = await meRes.json()
+    const me = await getMyProfile(token)
 
-    console.log('me full response =', me)  // ดู structure ก่อน
-
-    const userId = me.id ?? me.userId
-    if (!userId) return
-
-    // ดึงรูปจาก profile โดยตรง แทนที่จะใช้ /picture
     const imageUrl = me.mainImage
       ?? me.images?.find(img => img.primary)?.imageUrl
-      ?? me.images?.[0]?.imageUrl    // fallback รูปแรกเสมอ
+      ?? me.images?.[0]?.imageUrl
       ?? null
 
     profileImage.value = imageUrl ?? 'https://i.pravatar.cc/100'
+    isAdmin.value = String(me.role ?? '').trim().toLowerCase() === 'admin'
 
   } catch (err) {
     console.error('โหลดรูปพัง:', err)

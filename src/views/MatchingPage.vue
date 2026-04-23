@@ -631,7 +631,10 @@ function onLike() {
       </div>
       <div class="px-4 py-6 flex flex-col gap-4 h-[210px] shrink-0">
         <span class="headline4 text-gray-900">Merry Match!</span>
-        <div class="flex gap-[12px] overflow-x-auto overflow-y-hidden pb-2">
+        <div v-if="merryMatches.length === 0" class="flex items-center h-[100px]">
+          <p class="headline4 text-xl! text-gray-400">No matches yet — keep swiping to find your Merry Match!</p>
+        </div>
+        <div v-else class="flex gap-[12px] overflow-x-auto overflow-y-hidden pb-2">
           <div
             v-for="match in merryMatches"
             :key="match.id"
