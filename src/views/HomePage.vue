@@ -86,10 +86,9 @@
             <br /> Don't forget to get Merry with us
           </p>
 
-          <button
-            class="font-[Nunito] font-bold text-[16px] leading-[150%] tracking-normal text-center bg-red-500 hover:bg-red-700 transition px-6 py-3 rounded-full shadow-lg">
+          <RouterLink to="/matching" class="font-[Nunito] font-bold text-[16px] leading-[150%] tracking-normal text-center bg-red-500 hover:bg-red-700 transition px-6 py-3 rounded-full shadow-lg">
             Start matching!
-          </button>
+          </RouterLink>
         </div>
 
       </section>
@@ -288,10 +287,10 @@
               Let’s start finding <br /> and matching someone new
             </h2>
 
-            <button
+            <RouterLink to="/matching"
               class="bg-white text-pink-600 px-8 py-3 rounded-full font-semibold shadow-lg hover:opacity-90 transition">
               Start matching!
-            </button>
+            </RouterLink>
 
           </div>
 
