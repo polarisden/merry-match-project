@@ -1,14 +1,14 @@
 <template>
   <nav class="sticky top-0 z-50 bg-white border-b border-gray-200">
 
-    <div class="flex items-center justify-between px-[14px] py-[10px] lg:px-[160px]">
-      <Logo />
+    <div class="flex items-center justify-between px-[14px] lg:px-[160px] h-[52px] lg:h-[88px]">
+      <Logo class="w-[112px] h-[38px] lg:w-[167px] lg:h-[56px]" />
 
       <!-- ================= MOBILE ================= -->
       <div class="flex items-center gap-3 md:hidden">
 
         <!-- Chat -->
-        <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center relative">
+        <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center relative cursor-pointer" @click="$router.push('/matching/messages')">
           <ChatIcon />
           <span v-if="unread > 0" class="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-pink-500 rounded-full"></span>
         </div>
@@ -28,7 +28,7 @@
 
       <!-- ================= MOBILE DROPDOWN ================= -->
       <div v-if="open"
-        class="md:hidden fixed left-0 right-0 top-[74px] bottom-0 bg-white px-5 py-5 shadow-lg border-t overflow-y-auto z-40">
+        class="md:hidden fixed left-0 right-0 top-[52px] bottom-0 bg-white px-5 py-5 shadow-lg border-t overflow-y-auto z-40">
         <!-- ❌ ยังไม่ login -->
         <template v-if="!auth.isAuthenticated">
           <a href="#why" class="block py-2 text-gray-700">Why Merry Match?</a>

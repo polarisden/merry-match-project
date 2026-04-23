@@ -8,8 +8,8 @@ import heartLogo from '@/assets/icons/heart.svg'
 import filterLogo from '@/assets/icons/filter.svg'
 import mathNsearchLogo from '@/assets/icons/vector.svg'
 import merryMatchLogo from '@/assets/icons/merry_match.svg'
-import ProfilePreviewPopUp from '@/components/modals/ProfilePreviewPopUp.vue'
-import ProfilePreviewCard from '@/components/profile/ProfilePreviewCard.vue'
+import ProfilePreviewPopUp from '@/components/modals/ProfilePreviewPopUpForMatchingPage.vue'
+import ProfilePreviewCardForMatchingPage from '@/components/profile/ProfilePreviewCardForMatchingPage.vue'
 import ChatRoomCard from '@/views/chat/ChatRoomPage.vue'
 import ListWithMatchPageMobile from '@/components/ListWithMatchPageMobile.vue'
 
@@ -235,6 +235,23 @@ function clearFilter() {
   genderOptions.value = { default: false, female: false, nonbinary: false }
   filterMinAge.value = 18
   filterMaxAge.value = 50
+}
+
+function applyMobileFilter() {
+  // map genderOptions → selectedGender (เลือกได้แค่อันเดียว — ถ้าเลือกหลายอัน ให้ nonbinary > female > default)
+  if (genderOptions.value.nonbinary) toggleGender('non-binary')
+  else if (genderOptions.value.female) toggleGender('female')
+  else if (genderOptions.value.default) toggleGender('male')
+  else {
+    selectedGender.value = ''
+    router.replace({ path: route.path, query: { ...route.query, 'sexual-preference': undefined } })
+  }
+
+  minAge.value = filterMinAge.value
+  maxAge.value = filterMaxAge.value
+  currentIndex.value = 0
+  syncAgeToQuery()
+  showFilter.value = false
 }
 
 const minAge = ref(Number(route.query.minAge) || 18)
@@ -504,10 +521,10 @@ function onLike() {
 
 <template>
   <!-- mobile -->
-  <div class="bg-bg min-h-dvh flex flex-col relative lg:hidden">
+  <div class="bg-bg h-full flex flex-col relative lg:hidden">
     <ChatRoomCard
       v-if="selectedChatRoomId"
-      class="min-h-dvh"
+      class="h-full"
     />
     <div
       v-else
@@ -565,7 +582,7 @@ function onLike() {
       </div>
     </div>
 
-    <footer class="h-[56px] relative mt-auto flex px-4 justify-between items-center">
+    <footer v-if="!selectedChatRoomId" class="h-[56px] relative mt-auto flex px-4 justify-between items-center">
       <div class="flex gap-[10px] cursor-pointer" @click="showFilter = true">
         <filterLogo />
         <span class="text-gray-500 body4">Filter</span>
@@ -578,9 +595,9 @@ function onLike() {
   </div>
 
   <!-- desktop -->
-  <div class="hidden min-h-dvh w-full min-w-0 lg:flex">
+  <div class="hidden h-full w-full min-w-0 overflow-hidden lg:flex">
     <!-- left container -->
-    <section class="h-dvh w-[22%] flex flex-col relative">
+    <section class="h-full w-[22%] flex flex-col relative">
       <div class="h-[259px] shrink-0 flex items-center justify-center border-b border-b-gray-300 px-4">
         <div class="flex flex-col items-center gap-1 p-6 border border-purple-500 rounded-[16px] bg-gray-100 cursor-pointer" @click="$router.push('/matching')">
           <mathNsearchLogo class="w-[62px] h-[59px]"/>
@@ -655,7 +672,7 @@ function onLike() {
     </section>
 
     <!-- middle container -->
-    <section v-if="!selectedChatRoomId" class="flex h-dvh w-[62%] flex-col bg-bg overflow-hidden">
+    <section v-if="!selectedChatRoomId" class="flex h-full w-[62%] flex-col bg-bg overflow-hidden">
       <div class="flex flex-1 items-center justify-center">
         <div class="flex flex-col items-center">
           <!-- card deck -->
@@ -763,7 +780,7 @@ function onLike() {
     <ChatRoomCard v-if="selectedChatRoomId" class="min-w-0 flex-1" />
 
     <!-- right container -->
-    <section v-if="!selectedChatRoomId" class="w-[16%] px-4 pt-6">
+    <section v-if="!selectedChatRoomId" class="w-[16%] h-full overflow-y-auto px-4 pt-6">
       <div class="flex flex-col gap-4">
         <span class="body2 font-bold! text-gray-900">Gender you interest</span>
         <div class="flex flex-col gap-4 items-start mb-15">
@@ -903,7 +920,7 @@ function onLike() {
 
           <!-- search button -->
           <button class="w-full h-[56px] rounded-full bg-red-500 text-white body2 font-bold! cursor-pointer hover:bg-red-600 transition-colors"
-            @click="showFilter = false">
+            @click="applyMobileFilter">
             Search
           </button>
         </div>
@@ -999,17 +1016,15 @@ function onLike() {
   <Teleport to="body">
     <div
       v-if="showMobilePreview"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 lg:hidden"
+      class="fixed inset-0 z-50 flex items-start justify-center bg-black/50 overflow-y-auto lg:hidden"
       @click.self="showMobilePreview = false"
     >
-      <div class="relative overflow-y-auto max-h-dvh rounded-[24px] shadow-2xl">
-        <button
-          class="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/80 flex items-center justify-center cursor-pointer hover:bg-white transition"
-          @click="showMobilePreview = false"
-        >
-          <xLogo class="size-5 text-gray-700" />
-        </button>
-        <ProfilePreviewCard />
+      <div class="relative w-full max-w-[390px] rounded-[24px] shadow-2xl overflow-hidden my-auto">
+        <ProfilePreviewCardForMatchingPage
+          :user-id="currentProfile?.id"
+          :fallback-photo-url="currentProfile?.img"
+          @close="showMobilePreview = false"
+        />
       </div>
     </div>
   </Teleport>

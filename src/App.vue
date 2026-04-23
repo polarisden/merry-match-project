@@ -10,11 +10,11 @@ const showFooter = computed(() => showChrome.value && !route.matched.some((r) =>
 </script>
 
 <template>
-  <div class="min-h-dvh flex flex-col">
-    <Navbar v-if="showChrome" />
-    <main class="flex-1 min-w-0">
+  <div class="h-dvh flex flex-col overflow-hidden">
+    <Navbar v-if="showChrome" class="shrink-0" />
+    <main class="flex-1 min-h-0 min-w-0 overflow-hidden">
       <RouterView />
     </main>
-    <Footer v-if="showFooter" />
+    <Footer v-if="showFooter" class="shrink-0" />
   </div>
 </template>

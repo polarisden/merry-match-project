@@ -1,41 +1,61 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
 import { fetchChatRoomsForUser } from "@/views/chat/chatApi";
+import { apiUrl } from "@/lib/apiBase";
 import mathNsearchLogo from '@/assets/icons/vector.svg'
 import merryMatchLogo from '@/assets/icons/merry_match.svg'
 import profile1Img from '@/assets/images/profile1.png'
-import profile2Img from '@/assets/images/profile2.png'
-import faceImg from '@/assets/images/face.png'
 
 const router = useRouter();
-const route = useRoute();
 const authStore = useAuthStore();
 
 const chatRooms = ref([]);
 const loading = ref(false);
 const errorMsg = ref("");
+const currentUserId = ref(null);
+const merryMatches = ref([]);
 
 const unreadChatTotal = computed(() =>
   chatRooms.value.reduce((n, r) => n + (Number(r.unreadCount) || 0), 0),
 )
 
-// Merry Match list
-const merryMatches = ref([
-  { id: 1, img: profile1Img, name: 'Name ja' },
-  { id: 2, img: profile2Img, name: 'Name ja' },
-  { id: 3, img: faceImg, name: 'Name ja' },
-  { id: 4, img: profile1Img, name: 'Name ja' },
-  { id: 5, img: profile1Img, name: 'Name ja' },
-  { id: 6, img: profile2Img, name: 'Name ja' },
-  { id: 7, img: faceImg, name: 'Name ja' },
-  { id: 8, img: profile1Img, name: 'Name ja' },
-  { id: 9, img: profile1Img, name: 'Name ja' },
-  { id: 10, img: profile2Img, name: 'Name ja' },
-  { id: 11, img: faceImg, name: 'Name ja' },
-  { id: 12, img: profile1Img, name: 'Name ja' },
-])
+async function loadCurrentUser() {
+  const token = authStore.token;
+  if (!token) return;
+  try {
+    const res = await fetch(apiUrl('/api/users/me/profile'), {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return;
+    const me = await res.json();
+    currentUserId.value = me.id ?? me.userId ?? null;
+  } catch { /* ignore */ }
+}
+
+async function loadMerryMatches() {
+  const token = authStore.token;
+  if (!token || !currentUserId.value) return;
+  try {
+    const headers = { Authorization: `Bearer ${token}` };
+    const matchRes = await fetch(apiUrl(`/api/matchList?userId=${currentUserId.value}`), { headers });
+    if (!matchRes.ok) return;
+    const matches = await matchRes.json();
+    const results = await Promise.all(
+      matches.map(async (match) => {
+        const otherId = match.user1Id === currentUserId.value ? match.user2Id : match.user1Id;
+        try {
+          const picRes = await fetch(apiUrl(`/api/users/${otherId}/picture`), { headers });
+          if (!picRes.ok) return null;
+          const pic = await picRes.json();
+          return { id: match.id, userId: otherId, img: pic.mainPicture };
+        } catch { return null; }
+      })
+    );
+    merryMatches.value = results.filter(Boolean);
+  } catch { /* ignore */ }
+}
 
 async function loadRooms() {
   errorMsg.value = "";
@@ -58,32 +78,53 @@ async function loadRooms() {
 function openRoom(roomId) {
   const id = String(roomId || "").trim();
   if (!id) return;
-  router.push({ path: "/matching", query: { ...route.query, room: id } });
+  router.push({ path: "/matching", query: { room: id } });
 }
 
-onMounted(() => {
-  loadRooms();
+async function openChatRoomFromMatch(otherUserId) {
+  const token = authStore.token;
+  if (!token || !currentUserId.value) return;
+  try {
+    const res = await fetch(
+      apiUrl(`/api/chatroom-id?swiper_id=${currentUserId.value}&swiped_id=${otherUserId}`),
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!res.ok) return;
+    const data = await res.json();
+    const roomId = data.chatroom_id;
+    if (!roomId) return;
+    openRoom(roomId);
+  } catch (e) {
+    console.error('Failed to get chat room id:', e);
+  }
+}
+
+onMounted(async () => {
+  authStore.hydrate();
+  await loadCurrentUser();
+  await Promise.all([loadRooms(), loadMerryMatches()]);
 });
 </script>
 
 <template>
-  <div class="lg:hidden flex flex-col gap-6 px-4 py-6">
-    <div class="h-[171px] flex items-center justify-cente">
+  <div class="lg:hidden h-full flex flex-col overflow-hidden px-4">
+    <!-- Discover -->
+    <div class="shrink-0 py-6">
       <div class="flex flex-col items-center gap-1 p-6 border border-purple-500 rounded-[16px] bg-gray-100 cursor-pointer active:opacity-80" @click="router.push('/matching')">
         <mathNsearchLogo class="w-[62px] h-[59px]" />
         <span class="block text-red-600 headline4">Discover New Match</span>
-        <span class="w-[calc(94%)] body4 text-gray-700 text-center">Start find and Merry to get know and connect with
-          new friend!</span>
+        <span class="w-[calc(94%)] body4 text-gray-700 text-center">Start find and Merry to get know and connect with new friend!</span>
       </div>
     </div>
 
-    <div class="flex flex-col gap-4 h-[146px]">
+    <!-- Merry Match list -->
+    <div class="shrink-0 flex flex-col gap-4 pb-4">
       <span class="headline4 text-gray-900">Merry Match!</span>
-      <div class="flex gap-[12px] overflow-x-auto scrollbar-hide">
-        <div v-for="match in merryMatches" :key="match.id" class="relative shrink-0">
+      <div class="flex gap-[12px] overflow-x-auto pb-2">
+        <div v-for="match in merryMatches" :key="match.id" class="relative shrink-0 cursor-pointer" @click="openChatRoomFromMatch(match.userId)">
           <img
             :src="match.img"
-            :alt="match.name ? `Match avatar of ${match.name}` : 'Match avatar'"
+            :alt="'Match avatar'"
             class="size-[100px] object-cover rounded-[24px]"
           >
           <merryMatchLogo class="text-red-400 absolute right-0 bottom-0 w-[34px] h-5 stroke-4" />
@@ -91,8 +132,9 @@ onMounted(() => {
       </div>
     </div>
 
-    <div class="flex flex-col gap-4">
-      <div class="flex items-center gap-2">
+    <!-- Chat list -->
+    <div class="flex flex-1 min-h-0 flex-col gap-4 pb-4">
+      <div class="flex items-center gap-2 shrink-0">
         <span class="headline4 text-gray-900">Chat with Merry Match</span>
         <span
           v-if="unreadChatTotal > 0"
@@ -108,11 +150,11 @@ onMounted(() => {
       <p v-else-if="loading" class="body4 text-gray-500">Loading chats…</p>
       <p v-else-if="chatRooms.length === 0" class="body4 text-gray-500">No chat rooms yet.</p>
 
-      <div v-else class="flex flex-col gap-2">
+      <div v-else class="flex flex-col gap-2 overflow-y-auto min-h-0">
         <div
           v-for="room in chatRooms"
           :key="room.id"
-          class="min-h-[92px] py-4 px-3 flex gap-3 items-center cursor-pointer rounded-[16px] border border-white"
+          class="min-h-[92px] py-4 px-3 flex gap-3 items-center cursor-pointer rounded-[16px] border border-white shrink-0"
           @click="openRoom(room.id)"
         >
           <img
