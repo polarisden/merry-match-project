@@ -61,7 +61,7 @@ const router = createRouter({
         },
       ],
     },
-    { path: '/matching', component: MatchingPage, meta: { hideFooter: true }  },
+    { path: '/matching', component: MatchingPage, meta: { hideFooter: true, fixedLayout: true }  },
     {
       path: '/merry-list',
       name: 'merry-list',
@@ -71,7 +71,7 @@ const router = createRouter({
       path: '/matching/messages',
       name: 'matching-messages',
       component: () => import('@/components/ListWithMatchPageMobile.vue'),
-      meta: { hideFooter: true },
+      meta: { hideFooter: true, fixedLayout: true },
     },
     {
       path: '/chat/:contact?',

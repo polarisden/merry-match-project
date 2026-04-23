@@ -120,7 +120,10 @@ onMounted(async () => {
     <!-- Merry Match list -->
     <div class="shrink-0 flex flex-col gap-4 pb-4">
       <span class="headline4 text-gray-900">Merry Match!</span>
-      <div class="flex gap-[12px] overflow-x-auto pb-2">
+      <div v-if="merryMatches.length === 0" class="flex items-center h-[100px]">
+        <p class="body4 text-gray-400">No matches yet — keep swiping to find your Merry Match!</p>
+      </div>
+      <div v-else class="flex gap-[12px] overflow-x-auto pb-2">
         <div v-for="match in merryMatches" :key="match.id" class="relative shrink-0 cursor-pointer" @click="openChatRoomFromMatch(match.userId)">
           <img
             :src="match.img"

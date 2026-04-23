@@ -23,7 +23,7 @@ function go(path) {
       <!-- Sidebar -->
       <aside class="min-h-dvh bg-white border-r border-gray-100">
           <div class="px-6 pt-6 pb-4 flex flex-col mx-auto gap-4">
-            <div class="h-10 flex mx-auto">
+            <div class="h-10 flex mx-auto cursor-pointer" @click="go('/')">
               <LogoIcon class="h-20 w-42" aria-hidden="true" />
             </div>
             <p class="body2 text-gray-700 text-center">
