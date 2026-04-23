@@ -34,7 +34,7 @@
           <a href="#why" class="block py-2 text-gray-700">Why Merry Match?</a>
           <a href="#how" class="block py-2 text-gray-700">How to Merry</a>
 
-          <RouterLink to="/login" @click="closeMenu">
+          <RouterLink to="/Login" @click="closeMenu">
             <button class="mt-4 w-full bg-red-500 text-white py-2 rounded-full">
               Login
             </button>
@@ -108,9 +108,9 @@
             How to Merry
           </a>
 
-          <RouterLink to="/login">
+          <RouterLink to="/Login">
             <button
-              class="font-[Nunito] font-bold text-[16px] bg-red-500 hover:bg-red-700 text-white px-5 py-2 rounded-full">
+              class="font-[Nunito] font-bold text-[16px] bg-red-500 hover:bg-red-700 text-white px-5 py-2 rounded-full hover:cursor-pointer">
               Login
             </button>
           </RouterLink>
@@ -136,12 +136,20 @@
 
             <!-- Profile -->
             <div class="relative">
-              <div @click="toggleProfile" class="w-8 h-8 rounded-full bg-gray-300 overflow-hidden cursor-pointer">
-                <img :src="profileImage" class="w-full h-full object-cover" />
+              <div
+                ref="profileBtnEl"
+                @click="toggleProfile"
+                class="w-8 h-8 rounded-full bg-gray-300 overflow-hidden cursor-pointer"
+              >
+                <img :src="profileImage" alt="Profile" class="w-full h-full object-cover" />
               </div>
 
               <!-- Dropdown -->
-              <div v-if="profileOpen" class="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-lg border p-4 z-50">
+              <div
+                v-if="profileOpen"
+                ref="profileDropdownEl"
+                class="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-lg border p-4 z-50"
+              >
                 <!-- Gradient Button -->
                 <div class="mb-4">
                   <RouterLink to="/merry-plan">
@@ -200,7 +208,8 @@
 
 <script setup>
 
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { getMyProfile } from '@/views/profile/profileApi'
 import Logo from '@/assets/icons/logo.svg'
@@ -215,6 +224,7 @@ import Package from '@/assets/icons/package.svg'
 import AdminPanel from '@/assets/icons/admin-panel.svg'
 
 const auth = useAuthStore()
+const router = useRouter()
 
 const open = ref(false)
 const profileOpen = ref(false)
@@ -222,6 +232,8 @@ const unread = ref(0)
 
 const profileImage = ref('')
 const isAdmin = ref(false)
+const profileBtnEl = ref(/** @type {HTMLElement | null} */ (null))
+const profileDropdownEl = ref(/** @type {HTMLElement | null} */ (null))
 
 const toggleMenu = () => {
   open.value = !open.value
@@ -235,10 +247,15 @@ const closeMenu = () => {
   open.value = false
 }
 
+function closeProfileDropdown() {
+  profileOpen.value = false
+}
+
 const handleLogout = () => {
   auth.clearToken()
   profileOpen.value = false
   open.value = false
+  router.replace('/Login')
 }
 
 const fetchProfileImage = async () => {
@@ -248,7 +265,6 @@ const fetchProfileImage = async () => {
     if (!token) return
 
     const me = await getMyProfile(token)
-
     const imageUrl = me.mainImage
       ?? me.images?.find(img => img.primary)?.imageUrl
       ?? me.images?.[0]?.imageUrl
@@ -265,6 +281,31 @@ const fetchProfileImage = async () => {
 onMounted(async () => {
   await auth.hydrate()
   fetchProfileImage()
+
+  const onPointerDownCapture = (e) => {
+    if (!profileOpen.value) return
+    const target = /** @type {Node | null} */ (e?.target ?? null)
+    if (!target) return
+    const btn = profileBtnEl.value
+    const dd = profileDropdownEl.value
+    if (btn?.contains(target)) return
+    if (dd?.contains(target)) return
+    closeProfileDropdown()
+  }
+
+  const onKeyDown = (e) => {
+    if (!profileOpen.value) return
+    if (e?.key === 'Escape') closeProfileDropdown()
+  }
+
+  // Use capture so we still close even if inner components stop propagation.
+  document.addEventListener('pointerdown', onPointerDownCapture, true)
+  document.addEventListener('keydown', onKeyDown)
+
+  onUnmounted(() => {
+    document.removeEventListener('pointerdown', onPointerDownCapture, true)
+    document.removeEventListener('keydown', onKeyDown)
+  })
 })
 
 </script>

@@ -115,7 +115,7 @@ async function markRoomReadSupabase(chatRoomId, readerId) {
 }
 
 function storageBucket() {
-  const b = import.meta.env.VITE_SUPABASE_STORAGE_BUCKET
+  const b = import.meta.env.VITE_SUPABASE_STORAGE_BUCKET || import.meta.env.SUPABASE_BUCKET
   return typeof b === "string" && b.trim() ? b.trim() : "chat-images"
 }
 
@@ -186,7 +186,7 @@ export function normalizeChatRoom(row) {
   return {
     id: String(r.id ?? ""),
     matchId: String(r.match_id ?? r.matchId ?? ""),
-    createdAt: r.created_at != null ? String(r.created_at) : r.createdAt != null ? String(r.createdAt) : null,
+    createdAt: normalizeTimestamp(r.created_at ?? r.createdAt ?? null),
     lastMessageText:
       r.last_message_text != null
         ? String(r.last_message_text)
@@ -199,12 +199,7 @@ export function normalizeChatRoom(row) {
         : r.lastMessageType != null
           ? String(r.lastMessageType)
           : null,
-    lastMessageAt:
-      r.last_message_at != null
-        ? String(r.last_message_at)
-        : r.lastMessageAt != null
-          ? String(r.lastMessageAt)
-          : null,
+    lastMessageAt: normalizeTimestamp(r.last_message_at ?? r.lastMessageAt ?? null),
     lastSenderId:
       r.last_sender_id != null
         ? String(r.last_sender_id)
@@ -260,6 +255,21 @@ async function patchChatRoomLastMessageSupabase(chatRoomId, body) {
   if (error) throw new Error(error.message)
 }
 
+/**
+ * Ensure a timestamp string carries an explicit timezone. Postgres/Supabase may
+ * return values like "2026-04-23T13:34:41.120901" (no suffix) which JS parses
+ * as LOCAL time, causing the UI to display times shifted by the user's offset.
+ * Server timestamps are UTC, so append "Z" when no offset is present.
+ */
+function normalizeTimestamp(value) {
+  if (value == null) return null
+  const s = String(value).trim()
+  if (!s) return null
+  // Already has Z or ±HH:MM / ±HHMM offset.
+  if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(s)) return s
+  return `${s}Z`
+}
+
 export function normalizeMessage(row) {
   if (!row || typeof row !== "object") {
     return {
@@ -274,6 +284,7 @@ export function normalizeMessage(row) {
     }
   }
   const r = /** @type {Record<string, unknown>} */ (row)
+  const rawCreatedAt = r.created_at != null ? r.created_at : r.createdAt != null ? r.createdAt : null
   return {
     id: String(r.id ?? ""),
     chatRoomId: String(r.chat_room_id ?? r.chatRoomId ?? ""),
@@ -282,7 +293,7 @@ export function normalizeMessage(row) {
     messageText: r.message_text != null ? String(r.message_text) : r.messageText != null ? String(r.messageText) : null,
     imageUrl: r.image_url != null ? String(r.image_url) : r.imageUrl != null ? String(r.imageUrl) : null,
     isRead: Boolean(r.is_read ?? r.isRead),
-    createdAt: r.created_at != null ? String(r.created_at) : r.createdAt != null ? String(r.createdAt) : null,
+    createdAt: normalizeTimestamp(rawCreatedAt),
   }
 }
 

@@ -19,6 +19,7 @@ import { useAuthStore } from '@/stores/auth'
 import { fetchChatRoomsByMatch, fetchChatRoomsForUser } from '@/views/chat/chatApi'
 import { apiUrl } from '@/lib/apiBase'
 import { getChatPollIntervalMs } from '@/lib/chatPollMs'
+import { isSupabaseConfigured } from '@/lib/supabase'
 import { useChatRoomsRealtime } from '@/views/chat/useChatRoomsRealtime'
 
 const route = useRoute()
@@ -214,17 +215,29 @@ async function loadSwipeLimit() {
   }
 }
 
+// Track mobile vs desktop so only ONE ChatRoomCard is mounted at a time.
+// Two instances of useChatRoom would cause duplicate API calls and realtime subscriptions.
+const LG_BREAKPOINT = 1024 // Tailwind's lg
+const isMobile = ref(typeof window !== 'undefined' ? window.innerWidth < LG_BREAKPOINT : false)
+
+function onResize() {
+  isMobile.value = window.innerWidth < LG_BREAKPOINT
+}
+
 onMounted(() => {
   ensureSexualPreferenceQuery()
   loadChatRooms()
-  startChatRoomsPoll()
+  // Realtime-first: only poll when Supabase Realtime isn't configured.
+  if (!isSupabaseConfigured()) startChatRoomsPoll()
   loadProfiles()
   loadMerryMatches()
   loadSwipeLimit()
+  window.addEventListener('resize', onResize)
 })
 
 onUnmounted(() => {
   stopChatRoomsPoll()
+  window.removeEventListener('resize', onResize)
 })
 
 watch(
@@ -336,7 +349,6 @@ async function loadMerryMatches() {
       })
     )
     merryMatches.value = results.filter(Boolean)
-    console.log("here",merryMatches.value)
   } catch (e) {
     console.error('Failed to load merry matches:', e)
   }
@@ -547,7 +559,7 @@ function onLike() {
   <!-- mobile -->
   <div class="bg-bg h-full flex flex-col relative lg:hidden">
     <ChatRoomCard
-      v-if="selectedChatRoomId"
+      v-if="selectedChatRoomId && isMobile"
       class="h-full"
     />
     <div
@@ -817,7 +829,7 @@ function onLike() {
     </section>
 
     <!-- chat room (replaces middle + right when chat selected) -->
-    <ChatRoomCard v-if="selectedChatRoomId" class="min-w-0 flex-1" />
+    <ChatRoomCard v-if="selectedChatRoomId && !isMobile" class="min-w-0 flex-1" />
 
     <!-- right container -->
     <section v-if="!selectedChatRoomId" class="w-[16%] h-full overflow-y-auto px-4 pt-6">

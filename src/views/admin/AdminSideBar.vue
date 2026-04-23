@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from "vue"
 import { useRoute, useRouter } from "vue-router"
+import { useAuthStore } from "@/stores/auth"
 
 import LogoIcon from "@/assets/icons/logo.svg"
 import PackageIcon from "@/assets/icons/package.svg"
@@ -9,11 +10,17 @@ import LogoutIcon from "@/assets/icons/logout.svg"
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 
 const active = computed(() => String(route.name || ""))
 
 function go(path) {
   router.push(path)
+}
+
+function handleLogout() {
+  auth.clearToken()
+  router.replace("/Login")
 }
 </script>
 
@@ -61,7 +68,7 @@ function go(path) {
             <button
               type="button"
               class="w-full p-6 text-left hover:bg-gray-50 hover:cursor-pointer"
-              @click="go('/')"
+              @click="handleLogout"
             >
               <span class="flex items-center gap-3">
                 <LogoutIcon class="h-5 w-5 text-pink-500" aria-hidden="true" />
