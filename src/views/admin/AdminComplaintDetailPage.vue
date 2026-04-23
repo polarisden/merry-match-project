@@ -219,10 +219,10 @@ async function patchStatus(newStatus) {
       :open="resolveOpen"
       title="Resolve Complaint"
       message="This complaint is resolved?"
-      confirm-text="No, it's not"
-      cancel-text="Yes, it has been resolved"
-      @close="confirmResolveYes"
-      @confirm="closeModals"
+      confirm-text="Yes, it has been resolved"
+      cancel-text="No, it's not"
+      @close="closeModals"
+      @confirm="confirmResolveYes"
     />
 
     <!-- Cancel modal -->
@@ -230,10 +230,10 @@ async function patchStatus(newStatus) {
       :open="cancelOpen"
       title="Cancel Complaint"
       message="Do you sure to cancel this complaint?"
-      confirm-text="No, give me more time"
-      cancel-text="Yes, cancel this complaint"
-      @close="confirmCancelYes"
-      @confirm="closeModals"
+      confirm-text="Yes, cancel this complaint"
+      cancel-text="No, give me more time"
+      @close="closeModals"
+      @confirm="confirmCancelYes"
     />
   </section>
 </template>

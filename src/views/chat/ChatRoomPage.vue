@@ -141,6 +141,7 @@ function onSendImageDraft({ file, caption }) {
 
             <template v-else>
               <div
+                v-if="isEmpty"
                 class="mx-auto flex h-[78px] w-full max-w-[520px] items-center gap-3 rounded-2xl bg-purple-100 px-4 py-3 body5 text-red-700 lg:h-[90px] lg:max-w-[749px] lg:justify-center lg:body4"
                 role="status"
               >
@@ -150,15 +151,6 @@ function onSendImageDraft({ file, caption }) {
                   <br />
                   You can messege something nice and make a good conversation. Happy
                   Merry!
-                </p>
-              </div>
-
-              <div
-                v-if="isEmpty"
-                class="mx-auto mt-6 w-full max-w-[520px] rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-4 py-8 text-center lg:max-w-[749px]"
-              >
-                <p class="body2 text-gray-600">
-                  No messages yet. Say hi to start the conversation.
                 </p>
               </div>
 

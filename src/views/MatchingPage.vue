@@ -25,6 +25,30 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 
+function toDate(value) {
+  if (!value) return null
+  const d = new Date(String(value))
+  return Number.isFinite(d.getTime()) ? d : null
+}
+
+function isSameDay(a, b) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
+}
+
+function formatLastMessageAt(value) {
+  const d = toDate(value)
+  if (!d) return ''
+  const now = new Date()
+  if (isSameDay(d, now)) {
+    return new Intl.DateTimeFormat('en-En', { hour: '2-digit', minute: '2-digit' }).format(d)
+  }
+  return new Intl.DateTimeFormat('en-En', { day: '2-digit', month: '2-digit', year: '2-digit' }).format(d)
+}
+
 /** @type {import('vue').Ref<string | null>} */
 const selectedChatRoomId = ref(null)
 
@@ -620,15 +644,19 @@ function onLike() {
         </div>
       </div>
       <div class="flex flex-1 min-h-0 flex-col px-4 gap-4 pb-4">
-        <div class="flex items-center gap-2 shrink-0">
+        <div class="flex flex-col gap-1 shrink-0">
           <span class="headline4 text-gray-900">Chat with Merry Match</span>
-          <span
+          <p
             v-if="unreadChatTotal > 0"
-            class="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-1.5 body5 font-medium text-white tabular-nums"
+            class="body4 text-gray-700"
             :aria-label="`${unreadChatTotal} unread messages in Merry Match chats`"
           >
-            {{ unreadChatTotal > 99 ? "99+" : unreadChatTotal }}
-          </span>
+            Unread
+            <span class="text-red-500 font-semibold tabular-nums">
+              {{ unreadChatTotal > 99 ? "99+" : unreadChatTotal }}
+            </span>
+            messages
+          </p>
         </div>
         <p v-if="chatRoomsError" class="body4 text-red-600" role="alert">
           {{ chatRoomsError }}
@@ -659,13 +687,22 @@ function onLike() {
               <span class="body2 truncate text-gray-900">{{ room.peerName || 'Merry Match' }}</span>
               <span class="body4 truncate text-gray-700">{{ room.lastMessageText || 'Say hi!' }}</span>
             </div>
-            <span
-              v-if="(room.unreadCount || 0) > 0"
-              class="inline-flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 body5 font-medium text-white tabular-nums"
-              :aria-label="`${room.unreadCount} unread messages`"
-            >
-              {{ (room.unreadCount || 0) > 99 ? "99+" : room.unreadCount }}
-            </span>
+            <div class="flex shrink-0 flex-col items-end gap-2">
+              <span
+                v-if="formatLastMessageAt(room.lastMessageAt)"
+                class="body5 text-gray-500 tabular-nums"
+                :aria-label="`Last message at ${formatLastMessageAt(room.lastMessageAt)}`"
+              >
+                {{ formatLastMessageAt(room.lastMessageAt) }}
+              </span>
+              <span
+                v-if="(room.unreadCount || 0) > 0"
+                class="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-1.5 body5 font-medium text-white tabular-nums"
+                :aria-label="`${room.unreadCount} unread messages`"
+              >
+                {{ (room.unreadCount || 0) > 99 ? "99+" : room.unreadCount }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
