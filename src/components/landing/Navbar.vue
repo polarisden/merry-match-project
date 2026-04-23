@@ -8,7 +8,8 @@
       <div class="flex items-center gap-3 md:hidden">
 
         <!-- Chat -->
-        <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center relative">
+        <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center relative cursor-pointer"
+          @click="$router.push({ name: 'chat-room' })">
           <ChatIcon />
           <span v-if="unread > 0" class="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-pink-500 rounded-full"></span>
         </div>
@@ -44,10 +45,12 @@
         <!-- ✅ login แล้ว -->
         <template v-else>
           <div class="mb-5">
-            <button
-              class="w-full body4 py-3 rounded-full text-white font-semibold text-sm bg-gradient-to-r from-[#742138] to-[#A878BF] shadow">
-              ✨ More limit Merry!
-            </button>
+            <RouterLink to="/merry-plan">
+              <button
+                class="w-full body4 py-3 rounded-full text-white font-semibold text-sm bg-gradient-to-r from-[#742138] to-[#A878BF] shadow">
+                ✨ More limit Merry!
+              </button>
+            </RouterLink>
           </div>
 
           <!-- Menu (Mobile Dropdown) -->
@@ -67,7 +70,7 @@
 
             <RouterLink to="/membership" @click="closeMenu"
               class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg">
-              <Package class="w-4 h-4" />
+              <Package class="text-pink-100 w-4 h-4" />
               <span>Merry Membership</span>
             </RouterLink>
 
@@ -136,16 +139,17 @@
               <div v-if="profileOpen" class="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-lg border p-4 z-50">
                 <!-- Gradient Button -->
                 <div class="mb-4">
-                  <button
-                    class="w-full body4 py-3 rounded-full text-white font-semibold text-sm bg-gradient-to-r from-[#742138] to-[#A878BF] shadow">
-                    ✨ More limit Merry!
-                  </button>
+                  <RouterLink to="/merry-plan">
+                    <button
+                      class="w-full body4 py-3 rounded-full text-white font-semibold text-sm bg-gradient-to-r from-[#742138] to-[#A878BF] shadow">
+                      ✨ More limit Merry!
+                    </button>
+                  </RouterLink>
                 </div>
 
                 <!-- Menu -->
                 <div class="body4 text-gray-700 space-y-1">
-                  <RouterLink to="/profile/edit"
-                    class="flex items-center px-3 py-2 gap-3 hover:bg-gray-100 rounded-lg">
+                  <RouterLink to="/profile/edit" class="flex items-center px-3 py-2 gap-3 hover:bg-gray-100 rounded-lg">
                     <Profile class="w-4 h-4" />
                     <span>Profile</span>
                   </RouterLink>
@@ -156,7 +160,7 @@
                   </RouterLink>
 
                   <RouterLink to="/membership" class="flex items-center px-3 py-2 gap-3 hover:bg-gray-100 rounded-lg">
-                    <Package class="w-4 h-4" />
+                    <Package class="text-pink-100 w-4 h-4" />
                     <span>Merry Membership</span>
                   </RouterLink>
 
@@ -185,9 +189,10 @@
 </template>
 
 <script setup>
+
 import { ref, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth'
-
+import { apiUrl } from '@/lib/apiBase'
 import Logo from '@/assets/icons/logo.svg'
 import ChatIcon from '@/assets/icons/chatnavbar.svg'
 import BellIcon from '@/assets/icons/bellnavbar.svg'
@@ -204,7 +209,7 @@ const open = ref(false)
 const profileOpen = ref(false)
 const unread = ref(0)
 
-const profileImage = ref('https://i.pravatar.cc/100')
+const profileImage = ref('')
 
 const toggleMenu = () => {
   open.value = !open.value
@@ -224,7 +229,39 @@ const handleLogout = () => {
   open.value = false
 }
 
-onMounted(() => {
-  auth.hydrate()
+const fetchProfileImage = async () => {
+  try {
+    auth.hydrate()
+    const token = auth.token
+    if (!token) return
+
+    const meRes = await fetch(apiUrl('/api/users/me/profile'), {
+      headers: { Authorization: `Bearer ${token}` }
+    })
+    if (!meRes.ok) return
+    const me = await meRes.json()
+
+    console.log('me full response =', me)  // ดู structure ก่อน
+
+    const userId = me.id ?? me.userId
+    if (!userId) return
+
+    // ดึงรูปจาก profile โดยตรง แทนที่จะใช้ /picture
+    const imageUrl = me.mainImage
+      ?? me.images?.find(img => img.primary)?.imageUrl
+      ?? me.images?.[0]?.imageUrl    // fallback รูปแรกเสมอ
+      ?? null
+
+    profileImage.value = imageUrl ?? 'https://i.pravatar.cc/100'
+
+  } catch (err) {
+    console.error('โหลดรูปพัง:', err)
+  }
+}
+
+onMounted(async () => {
+  await auth.hydrate()
+  fetchProfileImage()
 })
+
 </script>
