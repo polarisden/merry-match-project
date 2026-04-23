@@ -101,19 +101,15 @@ function onSendImageDraft({ file, caption }) {
 </script>
 
 <template>
-  <div class="min-h-dvh w-full min-w-0 bg-bg">
+  <div class="h-full w-full min-w-0 bg-bg">
     <span class="sr-only" aria-live="polite">
       Unread messages elsewhere: {{ unreadTotal }}
     </span>
 
-    <div
-      class="min-h-dvh w-full min-w-0"
-    >
+    <div class="h-full w-full min-w-0">
       <!-- Chat column: full viewport width under the optional top bar -->
-      <div class="flex min-w-0 w-full flex-col">
-        <div
-          class="flex min-h-0 h-dvh flex-col"
-        >
+      <div class="flex min-w-0 w-full h-full flex-col">
+        <div class="flex min-h-0 h-full flex-col">
           <ChatHeader :contact-name="contactName" />
 
           <p

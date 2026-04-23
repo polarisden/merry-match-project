@@ -71,6 +71,7 @@ const router = createRouter({
       path: '/matching/messages',
       name: 'matching-messages',
       component: () => import('@/components/ListWithMatchPageMobile.vue'),
+      meta: { hideFooter: true },
     },
     {
       path: '/chat/:contact?',
