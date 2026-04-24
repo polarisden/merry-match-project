@@ -204,7 +204,7 @@ async function submitLogin() {
 
             <button
               type="submit"
-              class="mt-1 w-[343px] max-w-full h-12 rounded-full body4 bg-red-500 text-white text-[20px] font-semibold leading-none"
+              class="mt-1 w-[343px] max-w-full h-12 rounded-full body4 bg-red-500 text-white text-[20px] font-semibold leading-none hover:cursor-pointer"
               :disabled="loginLoading"
             >
               {{ loginLoading ? "Loading..." : "Log in" }}

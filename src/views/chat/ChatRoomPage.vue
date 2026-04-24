@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watchEffect } from "vue";
+import { computed, nextTick, onUpdated, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import ChatHeader from "@/components/chat/ChatHeader.vue";
 import ChatList from "@/components/chat/ChatList.vue";
@@ -24,7 +24,6 @@ const {
   sendError,
   unreadTotal,
   isEmpty,
-  listScrollEl,
   sendText,
   sendImageFile,
   messageSpacingClass,
@@ -32,9 +31,79 @@ const {
   peerImageUrl,
 } = useChatRoom(route);
 
-watchEffect(() => {
-  listScrollEl.value = chatListRef.value?.rootEl ?? null;
-});
+function getScrollEl() {
+  const rootEl = chatListRef.value?.rootEl
+  // defineExpose may expose a Ref or the unwrapped HTMLElement depending on Vue version
+  const el = rootEl instanceof HTMLElement ? rootEl : rootEl?.value
+  return el instanceof HTMLElement ? el : null
+}
+
+// Track whether the user is near the bottom BEFORE a DOM update, so that we
+// only auto-scroll when they were already following the conversation. If they
+// scrolled up to read older messages, don't jerk them back to the bottom.
+const NEAR_BOTTOM_PX = 120
+let wasNearBottom = true
+
+function isNearBottom() {
+  const el = getScrollEl()
+  if (!el) return true
+  const distanceFromBottom = el.scrollHeight - (el.scrollTop + el.clientHeight)
+  return distanceFromBottom <= NEAR_BOTTOM_PX
+}
+
+function scrollToBottom() {
+  const el = getScrollEl()
+  if (el) el.scrollTop = el.scrollHeight
+}
+
+async function scrollIfFollowing() {
+  if (!wasNearBottom) return
+  await nextTick()
+  scrollToBottom()
+  // If the last message contains an image, its height isn't known until the
+  // image loads. Scroll once more after image decode to keep following.
+  await nextTick()
+  scrollToBottom()
+}
+
+// Capture scroll state on every message count change, BEFORE the DOM updates,
+// so we know whether the user was following the tail.
+watch(
+  () => messages.value.length,
+  () => {
+    wasNearBottom = isNearBottom()
+    scrollIfFollowing()
+  },
+)
+
+// Initial load: snap to the bottom once the first batch renders.
+watch(loading, async (val) => {
+  if (!val) {
+    wasNearBottom = true
+    await nextTick()
+    scrollToBottom()
+  }
+})
+
+// Keep `wasNearBottom` updated as the user scrolls manually.
+function onUserScroll() {
+  wasNearBottom = isNearBottom()
+}
+
+watch(
+  () => getScrollEl(),
+  (el, prevEl) => {
+    if (prevEl) prevEl.removeEventListener("scroll", onUserScroll)
+    if (el) el.addEventListener("scroll", onUserScroll, { passive: true })
+  },
+  { immediate: true },
+)
+
+// Image messages change layout after their <img> decodes. Re-run the follow
+// check whenever the list DOM patches (e.g. images finish loading).
+onUpdated(() => {
+  scrollIfFollowing()
+})
 
 const contactName = computed(() => {
   if (peerName.value && peerName.value.length > 0) return peerName.value;
@@ -43,8 +112,6 @@ const contactName = computed(() => {
 });
 
 const peerAvatar = computed(() => peerImageUrl.value || "");
-
-const isDev = import.meta.env.DEV;
 
 function toDate(value) {
   if (!value) return null;
