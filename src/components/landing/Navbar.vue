@@ -122,7 +122,7 @@
             Start Matching!
           </RouterLink>
 
-          <RouterLink to="/membership" class="font-[Nunito] font-bold text-[16px] text-red-700 hover:text-pink-500">
+          <RouterLink to="/merry-plan" class="font-[Nunito] font-bold text-[16px] text-red-700 hover:text-pink-500">
             Merry Membership
           </RouterLink>
 
