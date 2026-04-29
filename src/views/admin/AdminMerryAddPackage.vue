@@ -118,12 +118,6 @@ async function onAdd() {
               :class="['w-full rounded-lg border px-4 py-2.5 text-sm text-gray-800 outline-none focus:ring-2 focus:ring-pink-100 transition appearance-none',
                 submitted && !merryLimit ? 'border-red-400' : 'border-gray-200 focus:border-pink-300']"
             />
-            <div class="absolute right-2 top-1/2 -translate-y-1/2 flex flex-col gap-0.5">
-              <button @click="merryLimit++"
-                class="text-gray-400 hover:text-gray-600 leading-none cursor-pointer text-[10px]">▲</button>
-              <button @click="merryLimit > 0 && merryLimit--"
-                class="text-gray-400 hover:text-gray-600 leading-none cursor-pointer text-[10px]">▼</button>
-            </div>
           </div>
           <p v-if="submitted && !merryLimit" class="text-xs text-red-400 mt-1">Merry limit is required.</p>
         </div>
