@@ -1,5 +1,4 @@
 <template>
-  <div class="h-[52px] lg:h-[88px] w-full border-b">nav</div>
   <div class="flex flex-col  lg:flex lg:flex-row bg-white lg:bg-bg-main lg:justify-center">
     <div
       class="bg-white lg:bg-bg-main w-full lg:w-fit flex flex-col lg:items-center mb-[88px] px-[16px] py-[40px] gap-[43px] lg:pl-0 lg:pt-[118px] lg:pb-[160px] lg:gap-[80px]"
@@ -65,7 +64,6 @@
       />
     </div>
   </div>
-  <div class="h-[345px] w-full border-t">footer</div>
 </template>
 
 <script setup>
