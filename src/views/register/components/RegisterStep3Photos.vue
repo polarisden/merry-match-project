@@ -37,13 +37,13 @@
           v-if="slot.previewUrl"
           type="button"
           aria-label="Remove photo"
-          class="absolute -top-3 -right-2 z-20 w-6 h-6 rounded-full bg-[#AF2758] flex items-center justify-center text-white"
+          class="absolute -top-3 -right-2 z-20 w-6 h-6 rounded-full bg-[#AF2758] flex items-center justify-center text-white hover:cursor-pointer"
           @click.stop="removePhotoAt(index)"
         >
           X
         </button>
 
-        <div class="relative z-10">
+        <div class="relative z-10 hover:cursor-pointer">
           <span
             v-if="!slot.previewUrl"
             class="text-[26px] leading-none"

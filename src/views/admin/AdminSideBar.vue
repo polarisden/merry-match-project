@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from "vue"
 import { useRoute, useRouter } from "vue-router"
+import { useAuthStore } from "@/stores/auth"
 
 import LogoIcon from "@/assets/icons/logo.svg"
 import PackageIcon from "@/assets/icons/package.svg"
@@ -9,11 +10,17 @@ import LogoutIcon from "@/assets/icons/logout.svg"
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 
 const active = computed(() => String(route.name || ""))
 
 function go(path) {
   router.push(path)
+}
+
+function handleLogout() {
+  auth.clearToken()
+  router.replace("/Login")
 }
 </script>
 
@@ -23,7 +30,7 @@ function go(path) {
       <!-- Sidebar -->
       <aside class="min-h-dvh bg-white border-r border-gray-100">
           <div class="px-6 pt-6 pb-4 flex flex-col mx-auto gap-4">
-            <div class="h-10 flex mx-auto">
+            <div class="h-10 flex mx-auto cursor-pointer" @click="go('/')">
               <LogoIcon class="h-20 w-42" aria-hidden="true" />
             </div>
             <p class="body2 text-gray-700 text-center">
@@ -61,7 +68,7 @@ function go(path) {
             <button
               type="button"
               class="w-full p-6 text-left hover:bg-gray-50 hover:cursor-pointer"
-              @click="go('/')"
+              @click="handleLogout"
             >
               <span class="flex items-center gap-3">
                 <LogoutIcon class="h-5 w-5 text-pink-500" aria-hidden="true" />

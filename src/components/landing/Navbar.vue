@@ -1,14 +1,15 @@
 <template>
   <nav class="sticky top-0 z-50 bg-white border-b border-gray-200">
 
-    <div class="flex items-center justify-between px-[14px] py-[10px] lg:px-[160px]">
-      <Logo />
+    <div class="flex items-center justify-between px-[14px] lg:px-[160px] h-[52px] lg:h-[88px]">
+      <RouterLink to="/"><Logo class="w-[112px] h-[38px] lg:w-[167px] lg:h-[56px]" /></RouterLink>
 
       <!-- ================= MOBILE ================= -->
       <div class="flex items-center gap-3 md:hidden">
 
         <!-- Chat -->
-        <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center relative">
+        <div v-if="auth.isAuthenticated"
+          class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center relative cursor-pointer" @click="$router.push('/matching/messages')">
           <ChatIcon />
           <span v-if="unread > 0" class="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-pink-500 rounded-full"></span>
         </div>
@@ -22,20 +23,20 @@
 
         <!-- Hamburger -->
         <button @click="toggleMenu">
-          <HamburgerIcon />
+          <HamburgerIcon class="hover:cursor-pointer"/>
         </button>
       </div>
 
       <!-- ================= MOBILE DROPDOWN ================= -->
       <div v-if="open"
-        class="md:hidden fixed left-0 right-0 top-[74px] bottom-0 bg-white px-5 py-5 shadow-lg border-t overflow-y-auto z-40">
+        class="md:hidden fixed left-0 right-0 top-[52px] bottom-0 bg-white px-5 py-5 shadow-lg border-t overflow-y-auto z-40">
         <!-- ❌ ยังไม่ login -->
         <template v-if="!auth.isAuthenticated">
           <a href="#why" class="block py-2 text-gray-700">Why Merry Match?</a>
           <a href="#how" class="block py-2 text-gray-700">How to Merry</a>
 
-          <RouterLink to="/login" @click="closeMenu">
-            <button class="mt-4 w-full bg-red-500 text-white py-2 rounded-full">
+          <RouterLink to="/Login" @click="closeMenu">
+            <button class="mt-4 w-full bg-red-500 text-white py-2 rounded-full hover:cursor-pointer">
               Login
             </button>
           </RouterLink>
@@ -44,37 +45,45 @@
         <!-- ✅ login แล้ว -->
         <template v-else>
           <div class="mb-5">
-            <button
-              class="w-full body4 py-3 rounded-full text-white font-semibold text-sm bg-gradient-to-r from-[#742138] to-[#A878BF] shadow">
-              ✨ More limit Merry!
-            </button>
+            <RouterLink to="/merry-plan">
+              <button
+                class="w-full body4 py-3 rounded-full text-white font-semibold text-sm bg-gradient-to-r from-[#742138] to-[#A878BF] shadow">
+                ✨ More limit Merry!
+              </button>
+            </RouterLink>
           </div>
 
           <!-- Menu (Mobile Dropdown) -->
           <div class="text-gray-700 body4 space-y-2">
 
             <RouterLink to="/profile/edit" @click="closeMenu"
-              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg">
+              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg hover:cursor-pointer">
               <Profile class="w-4 h-4" />
               <span>Profile</span>
             </RouterLink>
 
             <RouterLink to="/merry-list" @click="closeMenu"
-              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg">
+              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg hover:cursor-pointer">
               <Heart class="text-pink-100 w-4 h-4" />
               <span>Merry list</span>
             </RouterLink>
 
             <RouterLink to="/membership" @click="closeMenu"
-              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg">
-              <Package class="w-4 h-4" />
+              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg hover:cursor-pointer">
+              <Package class="text-pink-100 w-4 h-4" />
               <span>Merry Membership</span>
             </RouterLink>
 
             <RouterLink to="/report" @click="closeMenu"
-              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg">
+              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg hover:cursor-pointer">
               <Compliant class="w-4 h-4" />
               <span>Compliant</span>
+            </RouterLink>
+
+            <RouterLink v-if="isAdmin" to="/admin" @click="closeMenu"
+              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg hover:cursor-pointer">
+              <AdminPanel class="w-4 h-4" />
+              <span>Admin Panel</span>
             </RouterLink>
 
           </div>
@@ -100,9 +109,9 @@
             How to Merry
           </a>
 
-          <RouterLink to="/login">
+          <RouterLink to="/Login">
             <button
-              class="font-[Nunito] font-bold text-[16px] bg-red-500 hover:bg-red-700 text-white px-5 py-2 rounded-full">
+              class="font-[Nunito] font-bold text-[16px] bg-red-500 hover:bg-red-700 text-white px-5 py-2 rounded-full hover:cursor-pointer">
               Login
             </button>
           </RouterLink>
@@ -114,7 +123,7 @@
             Start Matching!
           </RouterLink>
 
-          <RouterLink to="/membership" class="font-[Nunito] font-bold text-[16px] text-red-700 hover:text-pink-500">
+          <RouterLink to="/merry-plan" class="font-[Nunito] font-bold text-[16px] text-red-700 hover:text-pink-500">
             Merry Membership
           </RouterLink>
 
@@ -128,24 +137,33 @@
 
             <!-- Profile -->
             <div class="relative">
-              <div @click="toggleProfile" class="w-8 h-8 rounded-full bg-gray-300 overflow-hidden cursor-pointer">
-                <img :src="profileImage" class="w-full h-full object-cover" />
+              <div
+                ref="profileBtnEl"
+                @click="toggleProfile"
+                class="w-8 h-8 rounded-full bg-gray-300 overflow-hidden cursor-pointer"
+              >
+                <img :src="profileImage" alt="Profile" class="w-full h-full object-cover" />
               </div>
 
               <!-- Dropdown -->
-              <div v-if="profileOpen" class="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-lg border p-4 z-50">
+              <div
+                v-if="profileOpen"
+                ref="profileDropdownEl"
+                class="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-lg border p-4 z-50"
+              >
                 <!-- Gradient Button -->
                 <div class="mb-4">
-                  <button
-                    class="w-full body4 py-3 rounded-full text-white font-semibold text-sm bg-gradient-to-r from-[#742138] to-[#A878BF] shadow">
-                    ✨ More limit Merry!
-                  </button>
+                  <RouterLink to="/merry-plan">
+                    <button
+                      class="w-full body4 py-3 rounded-full text-white font-semibold text-sm bg-gradient-to-r from-[#742138] to-[#A878BF] shadow cursor-pointer hover:scale-105">
+                      ✨ More limit Merry!
+                    </button>
+                  </RouterLink>
                 </div>
 
                 <!-- Menu -->
                 <div class="body4 text-gray-700 space-y-1">
-                  <RouterLink to="/profile/edit"
-                    class="flex items-center px-3 py-2 gap-3 hover:bg-gray-100 rounded-lg">
+                  <RouterLink to="/profile/edit" class="flex items-center px-3 py-2 gap-3 hover:bg-gray-100 rounded-lg">
                     <Profile class="w-4 h-4" />
                     <span>Profile</span>
                   </RouterLink>
@@ -156,13 +174,18 @@
                   </RouterLink>
 
                   <RouterLink to="/membership" class="flex items-center px-3 py-2 gap-3 hover:bg-gray-100 rounded-lg">
-                    <Package class="w-4 h-4" />
+                    <Package class="text-pink-100 w-4 h-4" />
                     <span>Merry Membership</span>
                   </RouterLink>
 
                   <RouterLink to="/report" class="flex items-center px-3 py-2 gap-3 hover:bg-gray-100 rounded-lg">
                     <Compliant class="w-4 h-4" />
                     <span>Compliant</span>
+                  </RouterLink>
+
+                  <RouterLink v-if="isAdmin" to="/admin" class="flex items-center px-3 py-2 gap-3 hover:bg-gray-100 rounded-lg">
+                    <AdminPanel class="w-4 h-4" />
+                    <span>Admin Panel</span>
                   </RouterLink>
                 </div>
 
@@ -185,9 +208,11 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useAuthStore } from '@/stores/auth'
 
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { getMyProfile } from '@/views/profile/profileApi'
 import Logo from '@/assets/icons/logo.svg'
 import ChatIcon from '@/assets/icons/chatnavbar.svg'
 import BellIcon from '@/assets/icons/bellnavbar.svg'
@@ -197,14 +222,19 @@ import Compliant from '@/assets/icons/complaint.svg'
 import Heart from '@/assets/icons/heart.svg'
 import Profile from '@/assets/icons/profile.svg'
 import Package from '@/assets/icons/package.svg'
+import AdminPanel from '@/assets/icons/admin-panel.svg'
 
 const auth = useAuthStore()
+const router = useRouter()
 
 const open = ref(false)
 const profileOpen = ref(false)
 const unread = ref(0)
 
-const profileImage = ref('https://i.pravatar.cc/100')
+const profileImage = ref('')
+const isAdmin = ref(false)
+const profileBtnEl = ref(/** @type {HTMLElement | null} */ (null))
+const profileDropdownEl = ref(/** @type {HTMLElement | null} */ (null))
 
 const toggleMenu = () => {
   open.value = !open.value
@@ -218,13 +248,65 @@ const closeMenu = () => {
   open.value = false
 }
 
+function closeProfileDropdown() {
+  profileOpen.value = false
+}
+
 const handleLogout = () => {
   auth.clearToken()
   profileOpen.value = false
   open.value = false
+  router.replace('/Login')
 }
 
-onMounted(() => {
-  auth.hydrate()
+const fetchProfileImage = async () => {
+  try {
+    auth.hydrate()
+    const token = auth.token
+    if (!token) return
+
+    const me = await getMyProfile(token)
+    const imageUrl = me.mainImage
+      ?? me.images?.find(img => img.primary)?.imageUrl
+      ?? me.images?.[0]?.imageUrl
+      ?? null
+
+    profileImage.value = imageUrl ?? 'https://i.pravatar.cc/100'
+    isAdmin.value = String(me.role ?? '').trim().toLowerCase() === 'admin'
+
+  } catch (err) {
+    console.error('โหลดรูปพัง:', err)
+  }
+}
+
+onMounted(async () => {
+  await auth.hydrate()
+  fetchProfileImage()
+
+  const onPointerDownCapture = (e) => {
+    if (!profileOpen.value) return
+    const target = /** @type {Node | null} */ (e?.target ?? null)
+    if (!target) return
+    const btn = profileBtnEl.value
+    const dd = profileDropdownEl.value
+    if (btn?.contains(target)) return
+    if (dd?.contains(target)) return
+    closeProfileDropdown()
+  }
+
+  const onKeyDown = (e) => {
+    if (!profileOpen.value) return
+    if (e?.key === 'Escape') closeProfileDropdown()
+  }
+
+  // Use capture so we still close even if inner components stop propagation.
+  document.addEventListener('pointerdown', onPointerDownCapture, true)
+  document.addEventListener('keydown', onKeyDown)
+
+  onUnmounted(() => {
+    document.removeEventListener('pointerdown', onPointerDownCapture, true)
+    document.removeEventListener('keydown', onKeyDown)
+  })
 })
+
 </script>

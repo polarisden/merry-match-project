@@ -8,8 +8,8 @@ import heartLogo from '@/assets/icons/heart.svg'
 import filterLogo from '@/assets/icons/filter.svg'
 import mathNsearchLogo from '@/assets/icons/vector.svg'
 import merryMatchLogo from '@/assets/icons/merry_match.svg'
-import ProfilePreviewPopUp from '@/components/modals/ProfilePreviewPopUp.vue'
-import ProfilePreviewCard from '@/components/profile/ProfilePreviewCard.vue'
+import ProfilePreviewPopUp from '@/components/modals/ProfilePreviewPopUpForMatchingPage.vue'
+import ProfilePreviewCardForMatchingPage from '@/components/profile/ProfilePreviewCardForMatchingPage.vue'
 import ChatRoomCard from '@/views/chat/ChatRoomPage.vue'
 import ListWithMatchPageMobile from '@/components/ListWithMatchPageMobile.vue'
 
@@ -19,11 +19,36 @@ import { useAuthStore } from '@/stores/auth'
 import { fetchChatRoomsByMatch, fetchChatRoomsForUser } from '@/views/chat/chatApi'
 import { apiUrl } from '@/lib/apiBase'
 import { getChatPollIntervalMs } from '@/lib/chatPollMs'
+import { isSupabaseConfigured } from '@/lib/supabase'
 import { useChatRoomsRealtime } from '@/views/chat/useChatRoomsRealtime'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+
+function toDate(value) {
+  if (!value) return null
+  const d = new Date(String(value))
+  return Number.isFinite(d.getTime()) ? d : null
+}
+
+function isSameDay(a, b) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
+}
+
+function formatLastMessageAt(value) {
+  const d = toDate(value)
+  if (!d) return ''
+  const now = new Date()
+  if (isSameDay(d, now)) {
+    return new Intl.DateTimeFormat('en-En', { hour: '2-digit', minute: '2-digit' }).format(d)
+  }
+  return new Intl.DateTimeFormat('en-En', { day: '2-digit', month: '2-digit', year: '2-digit' }).format(d)
+}
 
 /** @type {import('vue').Ref<string | null>} */
 const selectedChatRoomId = ref(null)
@@ -190,17 +215,29 @@ async function loadSwipeLimit() {
   }
 }
 
+// Track mobile vs desktop so only ONE ChatRoomCard is mounted at a time.
+// Two instances of useChatRoom would cause duplicate API calls and realtime subscriptions.
+const LG_BREAKPOINT = 1024 // Tailwind's lg
+const isMobile = ref(typeof window !== 'undefined' ? window.innerWidth < LG_BREAKPOINT : false)
+
+function onResize() {
+  isMobile.value = window.innerWidth < LG_BREAKPOINT
+}
+
 onMounted(() => {
   ensureSexualPreferenceQuery()
   loadChatRooms()
-  startChatRoomsPoll()
+  // Realtime-first: only poll when Supabase Realtime isn't configured.
+  if (!isSupabaseConfigured()) startChatRoomsPoll()
   loadProfiles()
   loadMerryMatches()
   loadSwipeLimit()
+  window.addEventListener('resize', onResize)
 })
 
 onUnmounted(() => {
   stopChatRoomsPoll()
+  window.removeEventListener('resize', onResize)
 })
 
 watch(
@@ -235,6 +272,23 @@ function clearFilter() {
   genderOptions.value = { default: false, female: false, nonbinary: false }
   filterMinAge.value = 18
   filterMaxAge.value = 50
+}
+
+function applyMobileFilter() {
+  // map genderOptions → selectedGender (เลือกได้แค่อันเดียว — ถ้าเลือกหลายอัน ให้ nonbinary > female > default)
+  if (genderOptions.value.nonbinary) toggleGender('non-binary')
+  else if (genderOptions.value.female) toggleGender('female')
+  else if (genderOptions.value.default) toggleGender('male')
+  else {
+    selectedGender.value = ''
+    router.replace({ path: route.path, query: { ...route.query, 'sexual-preference': undefined } })
+  }
+
+  minAge.value = filterMinAge.value
+  maxAge.value = filterMaxAge.value
+  currentIndex.value = 0
+  syncAgeToQuery()
+  showFilter.value = false
 }
 
 const minAge = ref(Number(route.query.minAge) || 18)
@@ -295,7 +349,6 @@ async function loadMerryMatches() {
       })
     )
     merryMatches.value = results.filter(Boolean)
-    console.log("here",merryMatches.value)
   } catch (e) {
     console.error('Failed to load merry matches:', e)
   }
@@ -504,10 +557,10 @@ function onLike() {
 
 <template>
   <!-- mobile -->
-  <div class="bg-bg min-h-dvh flex flex-col relative lg:hidden">
+  <div class="bg-bg h-full flex flex-col relative lg:hidden">
     <ChatRoomCard
-      v-if="selectedChatRoomId"
-      class="min-h-dvh"
+      v-if="selectedChatRoomId && isMobile"
+      class="h-full"
     />
     <div
       v-else
@@ -565,7 +618,7 @@ function onLike() {
       </div>
     </div>
 
-    <footer class="h-[56px] relative mt-auto flex px-4 justify-between items-center">
+    <footer v-if="!selectedChatRoomId" class="h-[56px] relative mt-auto flex px-4 justify-between items-center">
       <div class="flex gap-[10px] cursor-pointer" @click="showFilter = true">
         <filterLogo />
         <span class="text-gray-500 body4">Filter</span>
@@ -578,9 +631,9 @@ function onLike() {
   </div>
 
   <!-- desktop -->
-  <div class="hidden min-h-dvh w-full min-w-0 lg:flex">
+  <div class="hidden h-full w-full min-w-0 overflow-hidden lg:flex">
     <!-- left container -->
-    <section class="h-dvh w-[22%] flex flex-col relative">
+    <section class="h-full w-[22%] flex flex-col relative">
       <div class="h-[259px] shrink-0 flex items-center justify-center border-b border-b-gray-300 px-4">
         <div class="flex flex-col items-center gap-1 p-6 border border-purple-500 rounded-[16px] bg-gray-100 cursor-pointer" @click="$router.push('/matching')">
           <mathNsearchLogo class="w-[62px] h-[59px]"/>
@@ -590,7 +643,10 @@ function onLike() {
       </div>
       <div class="px-4 py-6 flex flex-col gap-4 h-[210px] shrink-0">
         <span class="headline4 text-gray-900">Merry Match!</span>
-        <div class="flex gap-[12px] overflow-x-auto overflow-y-hidden pb-2">
+        <div v-if="merryMatches.length === 0" class="flex items-center h-[100px]">
+          <p class="headline4 text-xl! text-gray-400">No matches yet — keep swiping to find your Merry Match!</p>
+        </div>
+        <div v-else class="flex gap-[12px] overflow-x-auto overflow-y-hidden pb-2">
           <div
             v-for="match in merryMatches"
             :key="match.id"
@@ -603,15 +659,19 @@ function onLike() {
         </div>
       </div>
       <div class="flex flex-1 min-h-0 flex-col px-4 gap-4 pb-4">
-        <div class="flex items-center gap-2 shrink-0">
+        <div class="flex flex-col gap-1 shrink-0">
           <span class="headline4 text-gray-900">Chat with Merry Match</span>
-          <span
+          <p
             v-if="unreadChatTotal > 0"
-            class="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-1.5 body5 font-medium text-white tabular-nums"
+            class="body4 text-gray-700"
             :aria-label="`${unreadChatTotal} unread messages in Merry Match chats`"
           >
-            {{ unreadChatTotal > 99 ? "99+" : unreadChatTotal }}
-          </span>
+            Unread
+            <span class="text-red-500 font-semibold tabular-nums">
+              {{ unreadChatTotal > 99 ? "99+" : unreadChatTotal }}
+            </span>
+            messages
+          </p>
         </div>
         <p v-if="chatRoomsError" class="body4 text-red-600" role="alert">
           {{ chatRoomsError }}
@@ -642,20 +702,29 @@ function onLike() {
               <span class="body2 truncate text-gray-900">{{ room.peerName || 'Merry Match' }}</span>
               <span class="body4 truncate text-gray-700">{{ room.lastMessageText || 'Say hi!' }}</span>
             </div>
-            <span
-              v-if="(room.unreadCount || 0) > 0"
-              class="inline-flex min-h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-red-500 px-1.5 body5 font-medium text-white tabular-nums"
-              :aria-label="`${room.unreadCount} unread messages`"
-            >
-              {{ (room.unreadCount || 0) > 99 ? "99+" : room.unreadCount }}
-            </span>
+            <div class="flex shrink-0 flex-col items-end gap-2">
+              <span
+                v-if="formatLastMessageAt(room.lastMessageAt)"
+                class="body5 text-gray-500 tabular-nums"
+                :aria-label="`Last message at ${formatLastMessageAt(room.lastMessageAt)}`"
+              >
+                {{ formatLastMessageAt(room.lastMessageAt) }}
+              </span>
+              <span
+                v-if="(room.unreadCount || 0) > 0"
+                class="inline-flex min-h-6 min-w-6 items-center justify-center rounded-full bg-red-500 px-1.5 body5 font-medium text-white tabular-nums"
+                :aria-label="`${room.unreadCount} unread messages`"
+              >
+                {{ (room.unreadCount || 0) > 99 ? "99+" : room.unreadCount }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
     </section>
 
     <!-- middle container -->
-    <section v-if="!selectedChatRoomId" class="flex h-dvh w-[62%] flex-col bg-bg overflow-hidden">
+    <section v-if="!selectedChatRoomId" class="flex h-full w-[62%] flex-col bg-bg overflow-hidden">
       <div class="flex flex-1 items-center justify-center">
         <div class="flex flex-col items-center">
           <!-- card deck -->
@@ -760,10 +829,10 @@ function onLike() {
     </section>
 
     <!-- chat room (replaces middle + right when chat selected) -->
-    <ChatRoomCard v-if="selectedChatRoomId" class="min-w-0 flex-1" />
+    <ChatRoomCard v-if="selectedChatRoomId && !isMobile" class="min-w-0 flex-1" />
 
     <!-- right container -->
-    <section v-if="!selectedChatRoomId" class="w-[16%] px-4 pt-6">
+    <section v-if="!selectedChatRoomId" class="w-[16%] h-full overflow-y-auto px-4 pt-6">
       <div class="flex flex-col gap-4">
         <span class="body2 font-bold! text-gray-900">Gender you interest</span>
         <div class="flex flex-col gap-4 items-start mb-15">
@@ -903,7 +972,7 @@ function onLike() {
 
           <!-- search button -->
           <button class="w-full h-[56px] rounded-full bg-red-500 text-white body2 font-bold! cursor-pointer hover:bg-red-600 transition-colors"
-            @click="showFilter = false">
+            @click="applyMobileFilter">
             Search
           </button>
         </div>
@@ -999,17 +1068,15 @@ function onLike() {
   <Teleport to="body">
     <div
       v-if="showMobilePreview"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 lg:hidden"
+      class="fixed inset-0 z-50 flex items-start justify-center bg-black/50 overflow-y-auto lg:hidden"
       @click.self="showMobilePreview = false"
     >
-      <div class="relative overflow-y-auto max-h-dvh rounded-[24px] shadow-2xl">
-        <button
-          class="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-white/80 flex items-center justify-center cursor-pointer hover:bg-white transition"
-          @click="showMobilePreview = false"
-        >
-          <xLogo class="size-5 text-gray-700" />
-        </button>
-        <ProfilePreviewCard />
+      <div class="relative w-full max-w-[390px] rounded-[24px] shadow-2xl overflow-hidden my-auto">
+        <ProfilePreviewCardForMatchingPage
+          :user-id="currentProfile?.id"
+          :fallback-photo-url="currentProfile?.img"
+          @close="showMobilePreview = false"
+        />
       </div>
     </div>
   </Teleport>

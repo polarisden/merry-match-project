@@ -50,6 +50,16 @@ const router = createRouter({
           component: () => import('@/views/admin/AdminMerryPackage.vue'),
         },
         {
+          path: 'packages/edit/:id',
+          name: 'admin-packages-edit',
+          component: () => import('@/views/admin/AdminMerryEditPackage.vue'),
+        },
+        {
+          path: 'packages/add',
+          name: 'admin-packages-add',
+          component: () => import('@/views/admin/AdminMerryAddPackage.vue'),
+        },
+        {
           path: 'complaints',
           name: 'admin-complaints',
           component: () => import('@/views/admin/AdminComplaintListPage.vue'),
@@ -61,7 +71,7 @@ const router = createRouter({
         },
       ],
     },
-    { path: '/matching', component: MatchingPage, meta: { hideFooter: true }  },
+    { path: '/matching', component: MatchingPage, meta: { hideFooter: true, fixedLayout: true }  },
     {
       path: '/merry-list',
       name: 'merry-list',
@@ -71,6 +81,7 @@ const router = createRouter({
       path: '/matching/messages',
       name: 'matching-messages',
       component: () => import('@/components/ListWithMatchPageMobile.vue'),
+      meta: { hideFooter: true, fixedLayout: true },
     },
     {
       path: '/chat/:contact?',

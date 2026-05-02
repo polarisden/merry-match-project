@@ -413,7 +413,7 @@ onBeforeUnmount(() => {
             <button
               v-else
               type="button"
-              class="flex h-full w-full flex-col items-center justify-center text-purple-600"
+              class="flex h-full w-full flex-col items-center justify-center text-purple-600 hover:cursor-pointer"
               @click="triggerImagePicker(slot.key)"
             >
               <span class="text-[26px] leading-none">+</span>
