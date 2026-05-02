@@ -8,7 +8,8 @@
       <div class="flex items-center gap-3 md:hidden">
 
         <!-- Chat -->
-        <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center relative cursor-pointer" @click="$router.push('/matching/messages')">
+        <div v-if="auth.isAuthenticated"
+          class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center relative cursor-pointer" @click="$router.push('/matching/messages')">
           <ChatIcon />
           <span v-if="unread > 0" class="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-pink-500 rounded-full"></span>
         </div>
@@ -22,7 +23,7 @@
 
         <!-- Hamburger -->
         <button @click="toggleMenu">
-          <HamburgerIcon />
+          <HamburgerIcon class="hover:cursor-pointer"/>
         </button>
       </div>
 
@@ -35,7 +36,7 @@
           <a href="#how" class="block py-2 text-gray-700">How to Merry</a>
 
           <RouterLink to="/Login" @click="closeMenu">
-            <button class="mt-4 w-full bg-red-500 text-white py-2 rounded-full">
+            <button class="mt-4 w-full bg-red-500 text-white py-2 rounded-full hover:cursor-pointer">
               Login
             </button>
           </RouterLink>
@@ -56,31 +57,31 @@
           <div class="text-gray-700 body4 space-y-2">
 
             <RouterLink to="/profile/edit" @click="closeMenu"
-              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg">
+              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg hover:cursor-pointer">
               <Profile class="w-4 h-4" />
               <span>Profile</span>
             </RouterLink>
 
             <RouterLink to="/merry-list" @click="closeMenu"
-              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg">
+              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg hover:cursor-pointer">
               <Heart class="text-pink-100 w-4 h-4" />
               <span>Merry list</span>
             </RouterLink>
 
             <RouterLink to="/membership" @click="closeMenu"
-              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg">
+              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg hover:cursor-pointer">
               <Package class="text-pink-100 w-4 h-4" />
               <span>Merry Membership</span>
             </RouterLink>
 
             <RouterLink to="/report" @click="closeMenu"
-              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg">
+              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg hover:cursor-pointer">
               <Compliant class="w-4 h-4" />
               <span>Compliant</span>
             </RouterLink>
 
             <RouterLink v-if="isAdmin" to="/admin" @click="closeMenu"
-              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg">
+              class="flex items-center px-3 py-3 gap-3 hover:bg-gray-100 rounded-lg hover:cursor-pointer">
               <AdminPanel class="w-4 h-4" />
               <span>Admin Panel</span>
             </RouterLink>
