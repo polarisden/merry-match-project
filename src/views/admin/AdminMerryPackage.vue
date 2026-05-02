@@ -61,25 +61,35 @@ function onAdd() {
 
 <template>
   <section class="min-h-screen bg-gray-100">
-    <!-- Header -->
-    <div class="flex items-center justify-between gap-4 px-10 py-4 h-20">
-      <h1 class="headline4 text-gray-900">Merry Package</h1>
-      <div class="flex items-center gap-3">
-        <!-- Search -->
-        <div class="flex items-center gap-2 rounded-[8px] border border-gray-300 bg-white px-4 py-2.5">
-          <svg class="h-4 w-4 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
-          </svg>
-          <input v-model="search" type="text" placeholder="Search..."
-            class="w-52 bg-transparent body2 text-gray-600 outline-none placeholder:text-gray-400" />
+    <!-- Top navbar -->
+    <div class="bg-white border-b border-gray-100">
+      <div class="flex items-center justify-between gap-4 px-10 py-4 h-20">
+        <h1 class="headline4 text-gray-900">
+          Merry Package
+        </h1>
+
+        <div class="flex justify-between gap-3 w-[536px]">
+          <div class="relative">
+            <input
+              v-model="search"
+              type="text"
+              placeholder="Search..."
+              class="h-12 w-[320px] rounded-lg border border-gray-200 bg-white px-9 text-[13px] text-gray-900 placeholder:text-gray-400 outline-none focus:border-purple-300 focus:ring-2 focus:ring-purple-100"
+            />
+            <span class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+              ⌕
+            </span>
+          </div>
+
+          <button
+            type="button"
+            class="h-12 w-[200px] shrink-0 flex items-center justify-center gap-2 rounded-xl bg-[#C13256] px-4 text-sm font-semibold text-white shadow hover:bg-[#a8294a] transition-colors cursor-pointer"
+            @click="onAdd"
+          >
+            <span class="text-lg leading-none font-light">+</span>
+            Add Package
+          </button>
         </div>
-        <!-- Add Button -->
-        <button @click="onAdd"
-          class="flex items-center gap-2 rounded-full bg-[#C13256] px-6 py-2.5 text-sm font-semibold text-white shadow hover:bg-[#a8294a] transition-colors cursor-pointer">
-          <span class="text-lg leading-none font-light">+</span>
-          Add Package
-        </button>
       </div>
     </div>
 
